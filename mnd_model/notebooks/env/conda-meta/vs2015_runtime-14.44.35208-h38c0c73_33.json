@@ -1,0 +1,31 @@
+{
+  "build": "h38c0c73_33",
+  "build_number": 33,
+  "channel": "https://conda.anaconda.org/conda-forge/win-64",
+  "constrains": [],
+  "depends": [
+    "vc14_runtime >=14.44.35208"
+  ],
+  "extracted_package_dir": "C:\\Users\\taran\\anaconda3\\pkgs\\vs2015_runtime-14.44.35208-h38c0c73_33",
+  "files": [],
+  "fn": "vs2015_runtime-14.44.35208-h38c0c73_33.conda",
+  "license": "BSD-3-Clause",
+  "link": {
+    "source": "C:\\Users\\taran\\anaconda3\\pkgs\\vs2015_runtime-14.44.35208-h38c0c73_33",
+    "type": 1
+  },
+  "md5": "65e5a2127012cd4dbc9354579661b9fd",
+  "name": "vs2015_runtime",
+  "package_tarball_full_path": "C:\\Users\\taran\\anaconda3\\pkgs\\vs2015_runtime-14.44.35208-h38c0c73_33.conda",
+  "paths_data": {
+    "paths": [],
+    "paths_version": 1
+  },
+  "requested_spec": "None",
+  "sha256": "93fc61d05770f4c6b66214ed3494f632bf6e0e6ee7fcb0fb0a847a4bed131953",
+  "size": 19159,
+  "subdir": "win-64",
+  "timestamp": 1765216369000,
+  "url": "https://conda.anaconda.org/conda-forge/win-64/vs2015_runtime-14.44.35208-h38c0c73_33.conda",
+  "version": "14.44.35208"
+}
