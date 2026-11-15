@@ -76,6 +76,39 @@ def main() -> None:
         OUT / "power.png",
     )
     print(curve.pivot(index="n_per_arm", columns="endpoint", values="power").round(2))
+
+    # 8. The hidden phase: loss, compensation and NfL around symptom onset.
+    plotting.save(plotting.plot_hidden_phase(res), OUT / "hidden_phase.png")
+
+    # 9. Endpoint fingerprints: NfL vs function by trial length (60 per arm).
+    panels = {}
+    for label, name in (
+        ("Neuroprotection (disease-modifying)", "neuroprotective"),
+        ("Symptomatic only", "symptomatic"),
+    ):
+        pool18 = mndsim.build_trial_pool(
+            mndsim.TREATMENTS[name], mndsim.TrialDesign(n_per_arm=60, duration=18), pool_size=1500, seed=5
+        )
+        panels[label] = mndsim.power_by_duration(
+            pool18, [3, 6, 9, 12, 18], n_per_arm=60, n_trials=300, seed=6
+        )
+    plotting.save(plotting.plot_power_by_duration(panels, ("nfl", "alsfrs_slope")), OUT / "fingerprints.png")
+    for label, df in panels.items():
+        print(label)
+        print(
+            df[df.endpoint.isin(["nfl", "alsfrs_slope"])]
+            .pivot(index="duration", columns="endpoint", values="power")
+            .round(2)
+        )
+
+    # 10. NfL-triggered treatment in presymptomatic SOD1 carriers.
+    from mndsim import hidden_phase as hp
+
+    strategies = hp.trigger_strategies(mndsim.TREATMENTS["gene_targeted"], n=400, seed=1)
+    tradeoff = hp.threshold_tradeoff((1.3, 1.5, 1.75, 2.0, 2.5, 3.0), n=400, seed=1)
+    plotting.save(plotting.plot_prevention(strategies.summary(), tradeoff), OUT / "prevention.png")
+    print(strategies.summary().round(2))
+    print(tradeoff.round(3))
     print(f"wrote figures to {OUT}", file=sys.stderr)
     _ = np  # keep the import for interactive tinkering
 

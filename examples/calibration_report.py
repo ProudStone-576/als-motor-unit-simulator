@@ -51,6 +51,11 @@ def main() -> None:
     print(f"  median motor units lost at onset      {100 * np.nanmedian(s.mu_loss_at_symptom_onset):6.0f} %")
     rho = np.corrcoef(np.log(s.delta_fs), np.log(follow))[0, 1]
     print(f"  corr(log Delta-FS, log survival)      {rho:6.2f}")
+    print(f"  median NfL at diagnosis (x healthy)   {np.nanmedian(s.nfl_fold_at_diagnosis):6.2f}")
+    print(f"  median NfL doubling before symptoms   {np.nanmedian(s.nfl_lead_time):6.1f} months")
+    ok = np.isfinite(s.nfl_at_diagnosis) & np.isfinite(s.delta_fs) & (s.delta_fs > 0)
+    r_nfl = np.corrcoef(np.log(s.nfl_at_diagnosis[ok]), np.log(s.delta_fs[ok]))[0, 1]
+    print(f"  corr(log NfL, log Delta-FS)           {r_nfl:6.2f}")
 
 
 if __name__ == "__main__":

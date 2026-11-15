@@ -301,6 +301,36 @@ def cmd_sensitivity(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_lag(args: argparse.Namespace) -> int:
+    from .hidden_phase import response_lag
+
+    df = response_lag(_patient(args), get_treatment(args.treatment))
+    _print_frame(df, "{:.1f}")
+    print(
+        "\nnfl_lag / function_lag: months from treatment start until NfL is 15% lower / function 1 point "
+        "better than untreated. A symptomatic drug changes function but never NfL.",
+        file=sys.stderr,
+    )
+    return 0
+
+
+def cmd_prevention(args: argparse.Namespace) -> int:
+    from .hidden_phase import MonitoringRule, threshold_tradeoff, trigger_strategies
+
+    _use_agg()
+    rule = MonitoringRule(threshold=args.threshold, interval=args.interval, reference=args.reference)
+    res = trigger_strategies(get_treatment(args.treatment), n=args.n, rule=rule, seed=args.seed)
+    _print_frame(res.summary().reset_index(), "{:.2f}")
+    tradeoff = threshold_tradeoff(rule=rule, n=args.n, seed=args.seed)
+    print("\nNfL threshold trade-off:")
+    _print_frame(tradeoff, "{:.3f}")
+    if args.plot:
+        from .plotting import plot_prevention
+
+        _save_fig(plot_prevention(res.summary(), tradeoff), args.plot)
+    return 0
+
+
 # ----------------------------------------------------------------------
 def _add_patient_args(p: argparse.ArgumentParser) -> None:
     p.add_argument("--phenotype", default="typical", choices=sorted(PHENOTYPES), help="preset patient")
@@ -397,6 +427,21 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--save-patient", help="write the fitted patient as JSON")
     p.add_argument("--plot")
     p.set_defaults(func=cmd_fit)
+
+    p = sub.add_parser("lag", help="how fast NfL vs function respond to a treatment, by start time")
+    _add_patient_args(p)
+    p.add_argument("--treatment", default="neuroprotective", choices=sorted(TREATMENTS))
+    p.set_defaults(func=cmd_lag)
+
+    p = sub.add_parser("prevention", help="NfL-triggered treatment in presymptomatic gene carriers")
+    p.add_argument("--treatment", default="gene_targeted", choices=sorted(TREATMENTS))
+    p.add_argument("--n", type=int, default=300, help="virtual carriers")
+    p.add_argument("--threshold", type=float, default=2.0, help="trigger at this multiple of baseline NfL")
+    p.add_argument("--interval", type=float, default=3.0, help="months between blood tests")
+    p.add_argument("--reference", default="personal", choices=["personal", "population"])
+    p.add_argument("--seed", type=int, default=0)
+    p.add_argument("--plot")
+    p.set_defaults(func=cmd_prevention)
 
     p = sub.add_parser("sensitivity", help="global sensitivity analysis (LHS + PRCC)")
     _add_patient_args(p)

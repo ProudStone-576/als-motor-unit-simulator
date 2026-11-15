@@ -12,7 +12,7 @@ Quick start::
 See the README and ``docs/MODEL.md`` for the model description.
 """
 
-from . import phenotypes
+from . import hidden_phase, phenotypes
 from .cohort import DEFAULT_POPULATION, PopulationModel, sample_cohort
 from .config import DEFAULT_CONFIG, UNIT_TYPES, PhysiologyConfig
 from .engine import simulate
@@ -29,12 +29,13 @@ from .trial import (
     TrialPool,
     TrialResults,
     build_trial_pool,
+    power_by_duration,
     power_curve,
     run_trials,
     simulate_trial,
 )
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 
 __all__ = [
     "DEFAULT_CONFIG",
@@ -61,7 +62,9 @@ __all__ = [
     "get_phenotype",
     "get_treatment",
     "global_sensitivity",
+    "hidden_phase",
     "phenotypes",
+    "power_by_duration",
     "power_curve",
     "prcc",
     "run_trials",

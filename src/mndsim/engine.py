@@ -101,6 +101,7 @@ class _Outputs:
     symptom_time: np.ndarray
     symptom_region: np.ndarray
     event_time: np.ndarray
+    nfl: np.ndarray
 
     @classmethod
     def allocate(cls, P: int, n_rec: int, n_items: int, N: int, record_units: bool) -> _Outputs:
@@ -116,7 +117,19 @@ class _Outputs:
             symptom_time=np.full(P, np.nan),
             symptom_region=np.full(P, -1, dtype=int),
             event_time=np.full(P, np.nan),
+            nfl=np.full((P, n_rec), np.nan),
         )
+
+
+def nfl_axon_weights(pool: MotorUnitPool, config: PhysiologyConfig) -> np.ndarray:
+    """Relative neurofilament content of each unit's axon (mean 1)."""
+    w = (pool.fibers / pool.fibers.mean()) ** config.nfl_size_exponent
+    return w / w.mean()
+
+
+def healthy_nfl(age: np.ndarray | float, config: PhysiologyConfig = DEFAULT_CONFIG) -> np.ndarray:
+    """Plasma NfL (pg/mL) without neurodegeneration, at a given age in years."""
+    return config.nfl_healthy * np.exp(config.nfl_age_slope * (np.asarray(age, dtype=float) - 60.0))
 
 
 def _run_chunk(
@@ -146,6 +159,16 @@ def _run_chunk(
     series = {name: arr[sl] for name, arr in out.series.items()}
     units_h = out.units_h[sl] if out.units_h is not None else None
     units_g = out.units_g[sl] if out.units_g is not None else None
+    nfl_out = out.nfl[sl]
+
+    # Neurofilament light: release from degenerating axons into plasma.
+    axon_w = nfl_axon_weights(pool, config)  # (N,)
+    axon_len = np.asarray(config.axon_length, dtype=float)  # (R,)
+    nfl_k = np.log(2.0) / config.nfl_half_life
+    nfl_decay = np.exp(-nfl_k * dt)
+    nfl_base = healthy_nfl(batch.age, config)  # (P,)
+    nfl = nfl_base.copy()
+    phi = config.nfl_distal_fraction
 
     pH = np.ones((P, R, N))
     pG = np.zeros((P, R, N))
@@ -188,6 +211,7 @@ def _run_chunk(
         for k, m in enumerate(type_masks):
             series["type_survival"][:, slot, :, k] = alive[..., m].sum(-1) / type_counts[k]
         series["items"][:, slot] = item_scores(mvc, config.functional_items)
+        nfl_out[:, slot] = nfl
         if units_h is not None:
             units_h[:, slot] = pH
             units_g[:, slot] = pG
@@ -213,7 +237,9 @@ def _run_chunk(
 
         # Excitotoxic drive from surviving UMNs, then UMN loss.
         drive = batch.excitotoxicity[:, None] * umn * mods.excitotoxic[:, None]
+        umn_prev = umn
         umn = umn * np.exp(-batch.umn_rate * activity * mods.umn[:, None] * dt)
+        released = config.nfl_umn_equivalents * (umn_prev - umn)  # (P, R) axon equivalents
 
         # Per-unit probability of *staying* healthy over this step.
         regional_rate = batch.lmn_rate * activity * (1.0 + drive) * mods.lmn[:, None]
@@ -238,10 +264,13 @@ def _run_chunk(
             nH += f_gh - f_hg
             nG += f_hg - f_gx - f_gh
             dead_fibers = f_gx.sum(-1)
+            released = released + phi * (go_hg * axon_w).sum(-1) + (1.0 - phi) * (die * axon_w).sum(-1)
         else:
             # Exact expected flows; written to minimise full-size temporaries.
             dead_fibers = c_death * nG.sum(-1)
+            released = released + (1.0 - phi) * c_death * (pG * axon_w).sum(-1)
             h_kept = pH * keep
+            released = released + phi * ((pH - h_kept) * axon_w).sum(-1)
             pG_back = pG * c_back
             pG = pG * stay_g + (pH - h_kept)
             pH = h_kept + pG_back
@@ -273,6 +302,10 @@ def _run_chunk(
         atrophied = orphaned * atrophy_q
         orphaned = orphaned - atrophied
         lost = lost + atrophied
+
+        # Plasma NfL: exact solution of dC/dt = k (C_base - C) + release rate.
+        source = config.nfl_release * (released * axon_len).sum(-1) / dt  # pg/mL per month
+        nfl = nfl_base + (nfl - nfl_base) * nfl_decay + source / nfl_k * (1.0 - nfl_decay)
 
         # Read-outs and events.
         t = step * dt
@@ -423,6 +456,7 @@ def simulate(
         symptom_onset=out.symptom_time,
         symptom_region=out.symptom_region,
         event_time=out.event_time,
+        nfl=out.nfl,
         time_origin=origin,
         units_healthy=out.units_h,
         units_denervating=out.units_g,

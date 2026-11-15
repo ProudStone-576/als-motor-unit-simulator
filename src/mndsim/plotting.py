@@ -453,6 +453,7 @@ def plot_power_curve(df: pd.DataFrame, *, target: float = 0.8, title: str | None
         "cafs": "CAFS (function + survival)",
         "mune_slope": "Motor unit number",
         "fvc_slope": "FVC slope",
+        "nfl": "Plasma NfL",
     }
     fig, ax = _figure(size=(8.6, 4.4), constrained_layout=True)
     style_axes(ax, title=title or "Power by endpoint", xlabel="Patients per arm", ylabel="Power (%)")
@@ -498,6 +499,190 @@ def plot_sensitivity(result: SensitivityResult, output: str, *, title: str | Non
             fontsize=8,
             color=INK_2,
         )
+    return fig
+
+
+def plot_hidden_phase(result: SimulationResult, patient: int = 0) -> Figure:
+    """Motor-unit loss, strength, function and blood NfL around symptom onset.
+
+    Two panels share a time axis (months from first symptom): the hidden
+    phase is shaded. NfL is shown as a multiple of its healthy level.
+    """
+    p = patient
+    onset = result.symptom_onset[p]
+    if not np.isfinite(onset):
+        raise ValueError("patient never becomes symptomatic within the horizon")
+    pat = result.patients[p]
+    r = region_index(pat.onset_region)
+    t = result.time - onset
+    region = REGION_LABELS[pat.onset_region].lower()
+    fig, axes = _figure(1, 2, size=(12.0, 4.2), constrained_layout=True)
+    ax = style_axes(
+        axes[0],
+        title=f"Loss is hidden until compensation runs out ({region})",
+        xlabel="Months from first symptom",
+        ylabel="% of healthy",
+    )
+    ax.plot(
+        t,
+        100 * result.mu_count[p, :, r] / result.pool.n_units,
+        color=SERIES[0],
+        lw=2,
+        label="Motor neurons alive",
+    )
+    ax.plot(t, 100 * result.mvc[p, :, r], color=SERIES[1], lw=2, label="Strength")
+    ax.plot(t, 100 * result.alsfrs[p] / result.max_score, color=SERIES[2], lw=2, label="Daily-function score")
+    ax.set_ylim(0, 105)
+    _legend(ax, loc="upper right")
+    ax2 = style_axes(
+        axes[1],
+        title="Blood NfL reports the rate of loss",
+        xlabel="Months from first symptom",
+        ylabel="NfL (x healthy for age)",
+    )
+    ax2.plot(t, result.nfl[p] / result.nfl[p, 0], color=SERIES[4], lw=2)
+    ax2.axhline(2.0, color=AXIS, lw=0.9, zorder=1)
+    ax2.annotate(
+        "doubled",
+        (t[-1], 2.0),
+        xytext=(-4, 3),
+        textcoords="offset points",
+        ha="right",
+        fontsize=8,
+        color=MUTED,
+    )
+    ax2.set_ylim(bottom=0)
+    lo, hi = t[0], min(t[-1], 60.0)
+    for a in (ax, ax2):
+        a.set_xlim(lo, hi)
+        a.axvspan(lo, 0, color=SERIES[0], alpha=0.07, lw=0)
+        a.annotate(
+            "hidden phase",
+            (lo, 0.02),
+            xycoords=("data", "axes fraction"),
+            xytext=(6, 4),
+            textcoords="offset points",
+            fontsize=8,
+            color=MUTED,
+        )
+        _mark_time(a, 0.0, "symptoms")
+        _mark_time(a, pat.diagnostic_delay, "diagnosis")
+        _mark_time(a, result.event_time[p] - onset, "resp. failure")
+    return fig
+
+
+def plot_power_by_duration(
+    panels: Mapping[str, pd.DataFrame],
+    endpoints: Sequence[str] = ("nfl", "alsfrs_slope"),
+    *,
+    title: str | None = None,
+) -> Figure:
+    """Small multiples of power against trial length (one panel per treatment).
+
+    ``panels`` maps a panel title to the output of
+    :func:`mndsim.trial.power_by_duration`.
+    """
+    names = {
+        "alsfrs_slope": "Functional slope",
+        "survival": "Survival",
+        "cafs": "CAFS",
+        "mune_slope": "Motor unit number",
+        "fvc_slope": "FVC slope",
+        "nfl": "Blood NfL",
+    }
+    colours = {
+        "nfl": SERIES[4],
+        "alsfrs_slope": SERIES[0],
+        "fvc_slope": SERIES[3],
+        "survival": SERIES[1],
+        "mune_slope": SERIES[2],
+        "cafs": SERIES[6],
+    }
+    fig, axes = _figure(1, len(panels), size=(5.2 * len(panels), 4.0), constrained_layout=True, squeeze=False)
+    for ax, (label, df) in zip(axes[0], panels.items(), strict=True):
+        style_axes(ax, title=label, xlabel="Trial length (months)", ylabel="Power (%)")
+        for ep in endpoints:
+            d = df[df.endpoint == ep]
+            ax.plot(
+                d.duration,
+                100 * d.power,
+                color=colours.get(ep, INK),
+                lw=2,
+                marker="o",
+                ms=5,
+                markeredgecolor=SURFACE,
+                markeredgewidth=1.5,
+                label=names.get(ep, ep),
+            )
+        ax.axhline(80, color=AXIS, lw=0.9, zorder=1)
+        ax.set_ylim(0, 102)
+        _legend(ax, loc="best")
+    if title:
+        fig.suptitle(title, x=0.01, ha="left", fontsize=12, color=INK, fontweight="bold")
+    return fig
+
+
+def plot_prevention(strategies: pd.DataFrame, tradeoff: pd.DataFrame) -> Figure:
+    """NfL-triggered treatment: outcomes by strategy, and the threshold trade-off.
+
+    ``strategies`` is :meth:`mndsim.hidden_phase.StrategyResult.summary`;
+    ``tradeoff`` is :func:`mndsim.hidden_phase.threshold_tradeoff`.
+    """
+    labels = {
+        "untreated": "Untreated",
+        "diagnosis": "Start at diagnosis",
+        "symptom_onset": "Start at first symptom",
+        "nfl_trigger": "Start when NfL rises",
+    }
+    fig, axes = _figure(1, 2, size=(12.0, 4.2), constrained_layout=True)
+    ax = style_axes(
+        axes[0],
+        title="Function two years after the first symptom",
+        xlabel="Median daily-function score (0-48)",
+    )
+    order = [k for k in ("untreated", "diagnosis", "symptom_onset", "nfl_trigger") if k in strategies.index]
+    vals = [strategies.loc[k, "median_function_at_+24mo"] for k in order]
+    colours = [NEUTRAL_SERIES, SERIES[1], SERIES[0], SERIES[4]][: len(order)]
+    ax.barh([labels[k] for k in order], vals, color=colours, height=0.55)
+    ax.grid(axis="y", visible=False)
+    ax.set_xlim(0, 48)
+    for y, v in enumerate(vals):
+        ax.annotate(
+            f"{v:.0f}",
+            (v, y),
+            xytext=(4, 0),
+            textcoords="offset points",
+            va="center",
+            fontsize=8.5,
+            color=INK_2,
+        )
+    ax2 = style_axes(
+        axes[1],
+        title="Choosing the NfL threshold",
+        xlabel="False alarms in non-converting carriers over 10 years (%)",
+        ylabel="Carriers treated before symptoms (%)",
+    )
+    ax2.plot(
+        100 * tradeoff.false_trigger_rate_10y,
+        100 * tradeoff.triggered_before_symptoms,
+        color=SERIES[4],
+        lw=2,
+        marker="o",
+        ms=6,
+        markeredgecolor=SURFACE,
+        markeredgewidth=1.5,
+    )
+    for _, row in tradeoff.iterrows():
+        ax2.annotate(
+            f"{row.threshold:g}x",
+            (100 * row.false_trigger_rate_10y, 100 * row.triggered_before_symptoms),
+            xytext=(6, -2),
+            textcoords="offset points",
+            fontsize=8,
+            color=INK_2,
+        )
+    ax2.set_xlim(-2, max(5.0, 100 * tradeoff.false_trigger_rate_10y.max() * 1.1))
+    ax2.set_ylim(0, 100)
     return fig
 
 

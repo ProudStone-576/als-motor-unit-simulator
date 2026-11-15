@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "mndsim"
-version = "0.1.0"
+version = "0.2.0"
 description = "Mechanistic motor-unit degeneration simulator for ALS/MND: virtual patients, counterfactual treatments and in-silico trials."
 readme = "README.md"
 license = { file = "LICENSE" }
@@ -68,3 +68,4 @@ ignore = ["E741", "RUF001", "RUF002", "RUF003", "B008"]
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["B018"]
 "examples/*" = ["E402"]
+"web/build_site.py" = ["E501"]

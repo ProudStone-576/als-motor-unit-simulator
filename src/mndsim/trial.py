@@ -32,7 +32,7 @@ from scipy import stats
 
 from .cohort import DEFAULT_POPULATION, PopulationModel
 from .config import DEFAULT_CONFIG, PhysiologyConfig
-from .engine import simulate
+from .engine import healthy_nfl, simulate
 from .metrics import slopes
 from .patient import Patient
 from .regions import region_index
@@ -40,7 +40,7 @@ from .result import SimulationResult
 from .scoring import observe_items
 from .treatment import Treatment, TreatmentLike, as_treatment_list, treatment_label
 
-ENDPOINTS: tuple[str, ...] = ("alsfrs_slope", "survival", "cafs", "mune_slope", "fvc_slope")
+ENDPOINTS: tuple[str, ...] = ("alsfrs_slope", "survival", "cafs", "mune_slope", "fvc_slope", "nfl")
 """Endpoints analysed in every replicate trial."""
 
 
@@ -80,6 +80,11 @@ class TrialDesign:
         clinically affected muscle).
     fvc_noise_sd:
         Additive noise on FVC (% predicted points).
+    nfl_noise_cv:
+        Visit-to-visit (log-normal) variability of plasma NfL, assay included.
+    min_nfl_fold:
+        Eligibility: baseline NfL as a multiple of the healthy level for age
+        (enrichment for active degeneration; 0 = none).
     alpha:
         Two-sided significance level.
     """
@@ -90,6 +95,7 @@ class TrialDesign:
     max_months_since_onset: float = 24.0
     min_fvc: float = 70.0
     min_delta_fs: float = 0.0
+    min_nfl_fold: float = 0.0
     genotype: str | None = None
     enrollment_window: float = 3.0
     dropout_rate: float = 0.01
@@ -97,6 +103,7 @@ class TrialDesign:
     mune_noise_cv: float = 0.15
     mune_region: str = "onset"
     fvc_noise_sd: float = 5.0
+    nfl_noise_cv: float = 0.2
     alpha: float = 0.05
 
     def __post_init__(self) -> None:
@@ -138,6 +145,7 @@ class TrialPool:
     visit_times: np.ndarray
     items: np.ndarray  # (2, n, K, n_items)
     fvc: np.ndarray  # (2, n, K)
+    nfl: np.ndarray  # (2, n, K)
     mune: np.ndarray  # (2, n, K)
     event: np.ndarray  # (2, n) months from enrolment; inf if beyond horizon
     n_screened: int
@@ -286,6 +294,8 @@ def build_trial_pool(
             fits = t_enroll + design.duration <= horizon
             duration_ok = (t_enroll - onset) <= design.max_months_since_onset
         fvc0 = _gather(res.fvc, np.nan_to_num(t_enroll)[:, None], record_dt)[:, 0]
+        nfl0 = _gather(res.nfl, np.nan_to_num(t_enroll)[:, None], record_dt)[:, 0]
+        nfl_fold0 = nfl0 / healthy_nfl(np.array([p.age_at_onset for p in screen]), config)
         score0 = _gather(res.alsfrs, np.nan_to_num(t_enroll)[:, None], record_dt)[:, 0]
         with np.errstate(invalid="ignore", divide="ignore"):
             dfs = (res.max_score - score0) / (t_enroll - onset)
@@ -296,6 +306,7 @@ def build_trial_pool(
             & duration_ok
             & (fvc0 >= design.min_fvc)
             & (dfs >= design.min_delta_fs)
+            & (nfl_fold0 >= design.min_nfl_fold)
         )
         if design.genotype is not None:
             ok &= np.array([p.genotype == design.genotype for p in screen])
@@ -332,7 +343,7 @@ def build_trial_pool(
         mune_r = np.full(len(patients), region_index(design.mune_region))
 
     def outcomes(results: Sequence[tuple[SimulationResult, np.ndarray]]):
-        items, fvc, mune, event = [], [], [], []
+        items, fvc, mune, event, nfl = [], [], [], [], []
         start = 0
         for res, idx in results:
             tv = t_visits[start : start + idx.size]
@@ -341,16 +352,18 @@ def build_trial_pool(
             r = mune_r[start : start + idx.size]
             mune.append(_gather(res.mu_count[idx][np.arange(idx.size), :, r], tv, record_dt))
             event.append(res.event_time[idx])
+            nfl.append(_gather(res.nfl[idx], tv, record_dt))
             start += idx.size
         return (
             np.concatenate(items),
             np.concatenate(fvc),
             np.concatenate(mune),
             np.concatenate(event),
+            np.concatenate(nfl),
         )
 
-    c_items, c_fvc, c_mune, c_event = outcomes(list(zip(control_parts, control_idx, strict=True)))
-    t_items, t_fvc, t_mune, t_event = outcomes([(treated, np.arange(len(patients)))])
+    c_items, c_fvc, c_mune, c_event, c_nfl = outcomes(list(zip(control_parts, control_idx, strict=True)))
+    t_items, t_fvc, t_mune, t_event, t_nfl = outcomes([(treated, np.arange(len(patients)))])
 
     events = np.stack([c_event, t_event]) - enrollment
     events = np.where(np.isfinite(events), events, np.inf)
@@ -370,6 +383,7 @@ def build_trial_pool(
         visit_times=visits,
         items=np.stack([c_items, t_items]),
         fvc=np.stack([c_fvc, t_fvc]),
+        nfl=np.stack([c_nfl, t_nfl]),
         mune=np.stack([c_mune, t_mune]),
         event=events,
         n_screened=n_screened,
@@ -444,11 +458,13 @@ def _analyse(
     idx: np.ndarray,
     arm: np.ndarray,
 ) -> dict[str, float]:
-    visits = pool.visit_times
-    items = pool.items[arm, idx]  # (n, K, I)
+    keep = pool.visit_times <= design.duration + 1e-9
+    visits = pool.visit_times[keep]
+    items = pool.items[arm, idx][:, keep]  # (n, K, I)
     event = pool.event[arm, idx]
-    fvc = pool.fvc[arm, idx]
-    mune = pool.mune[arm, idx]
+    fvc = pool.fvc[arm, idx][:, keep]
+    mune = pool.mune[arm, idx][:, keep]
+    nfl = pool.nfl[arm, idx][:, keep]
 
     if design.dropout_rate > 0:
         dropout = rng.exponential(1.0 / design.dropout_rate, idx.size)
@@ -491,11 +507,23 @@ def _analyse(
     s_fvc = slopes(visits, noisy_fvc)
     eff, p = welch_test(s_fvc[tx], s_fvc[~tx])
     out.update(fvc_slope_effect=eff, fvc_slope_p=p)
+
+    # NfL: change in log NfL from baseline to the last observed visit, reported
+    # as the treated/control geometric mean ratio (as in gene-therapy trials).
+    log_nfl = np.log(nfl * np.exp(rng.normal(0.0, design.nfl_noise_cv, nfl.shape)))
+    log_nfl = np.where(seen, log_nfl, np.nan)
+    has_follow_up = np.isfinite(log_nfl[:, 1:]).any(axis=1)
+    last = np.array([row[np.isfinite(row)][-1] for row in log_nfl])
+    change = np.where(has_follow_up, last - log_nfl[:, 0], np.nan)
+    eff, p = welch_test(change[tx], change[~tx])
+    out.update(nfl_effect=float(np.exp(eff)), nfl_p=p)
     return out
 
 
 #: Direction of benefit for each endpoint effect (+1: larger is better).
-_BENEFIT = {"alsfrs_slope": 1, "survival": -1, "cafs": 1, "mune_slope": 1, "fvc_slope": 1}
+_BENEFIT = {"alsfrs_slope": 1, "survival": -1, "cafs": 1, "mune_slope": 1, "fvc_slope": 1, "nfl": -1}
+#: Effects reported as ratios (null value 1) rather than differences (null 0).
+_RATIO_ENDPOINTS = ("survival", "nfl")
 
 
 @dataclass(frozen=True, eq=False)
@@ -515,7 +543,7 @@ class TrialResults:
         for ep in ENDPOINTS:
             p = self.table[f"{ep}_p"]
             eff = self.table[f"{ep}_effect"]
-            favour = np.sign(eff - (1.0 if ep == "survival" else 0.0)) == _BENEFIT[ep]
+            favour = np.sign(eff - (1.0 if ep in _RATIO_ENDPOINTS else 0.0)) == _BENEFIT[ep]
             sig = (p < self.design.alpha) & favour
             n = int(p.notna().sum())
             power = float(sig.sum() / n) if n else float("nan")
@@ -540,10 +568,21 @@ def run_trials(
     n_trials: int = 500,
     *,
     n_per_arm: int | None = None,
+    duration: float | None = None,
     seed: int | None = 0,
 ) -> TrialResults:
-    """Simulate replicate trials by resampling arms from a :class:`TrialPool`."""
-    design = pool.design if n_per_arm is None else pool.design.replace(n_per_arm=n_per_arm)
+    """Simulate replicate trials by resampling arms from a :class:`TrialPool`.
+
+    ``n_per_arm`` and ``duration`` (shorter than the pool's follow-up)
+    override the pool's design, so one pool serves many designs.
+    """
+    design = pool.design
+    if n_per_arm is not None:
+        design = design.replace(n_per_arm=n_per_arm)
+    if duration is not None:
+        if duration > pool.design.duration + 1e-9:
+            raise ValueError("duration cannot exceed the pool's follow-up")
+        design = design.replace(duration=duration, visit_interval=min(design.visit_interval, duration))
     n = design.n_per_arm
     if 2 * n > pool.size:
         raise ValueError(f"pool of {pool.size} is too small for 2 x {n} patients")
@@ -571,6 +610,23 @@ def power_curve(
         res = run_trials(pool, n_trials, n_per_arm=int(n), seed=seed)
         df = res.power()
         df.insert(0, "n_per_arm", int(n))
+        frames.append(df)
+    return pd.concat(frames, ignore_index=True)
+
+
+def power_by_duration(
+    pool: TrialPool,
+    durations: Sequence[float],
+    n_per_arm: int | None = None,
+    n_trials: int = 300,
+    seed: int | None = 0,
+) -> pd.DataFrame:
+    """Power of every endpoint for trials stopped after each follow-up duration."""
+    frames = []
+    for d in durations:
+        res = run_trials(pool, n_trials, n_per_arm=n_per_arm, duration=float(d), seed=seed)
+        df = res.power()
+        df.insert(0, "duration", float(d))
         frames.append(df)
     return pd.concat(frames, ignore_index=True)
 

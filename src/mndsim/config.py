@@ -84,6 +84,31 @@ class PhysiologyConfig:
     """Time constant over which disease activity ramps up once it reaches
     a region (months)."""
 
+    # --- Neurofilament light chain (NfL) ----------------------------------
+    nfl_healthy: float = 10.0
+    """Plasma NfL of a healthy 60-year-old, pg/mL. The model's NfL scale is
+    illustrative: use ratios to healthy rather than absolute values."""
+    nfl_age_slope: float = 0.022
+    """Log-linear rise of healthy NfL with age, per year (NfL increases with
+    normal ageing)."""
+    nfl_half_life: float = 1.0
+    """Plasma NfL elimination half-life, months (illustrative)."""
+    nfl_release: float = 3.3
+    """pg/mL added per month by degeneration of one axon-equivalent per month
+    (scale factor; sets the ALS-to-healthy ratio)."""
+    nfl_distal_fraction: float = 0.3
+    """Fraction of a lower motor neuron's NfL released when it starts dying
+    back (distal axon); the rest is released when the neuron is lost."""
+    nfl_size_exponent: float = 0.25
+    """Axonal NfL content scales as (unit size)^exponent, normalised to mean 1:
+    large motor units have thicker axons."""
+    nfl_umn_equivalents: float = 150.0
+    """NfL content of a region's whole upper-motor-neuron population, in
+    lower-motor-unit axon equivalents (illustrative)."""
+    axon_length: tuple[float, float, float, float] = (0.25, 0.5, 0.8, 1.0)
+    """Relative axon length of bulbar, respiratory, upper- and lower-limb
+    pathways; longer axons contain more neurofilament."""
+
     # --- Clinical read-outs -------------------------------------------------
     symptom_threshold: float = 0.80
     """Regional strength (fraction of healthy MVC) below which weakness is
@@ -112,6 +137,12 @@ class PhysiologyConfig:
             raise ValueError("type_sprouting values must be in [0, 1]")
         if any(v < 0 for v in self.type_vulnerability):
             raise ValueError("type_vulnerability values must be >= 0")
+        if self.nfl_half_life <= 0 or self.nfl_healthy <= 0 or self.nfl_release < 0:
+            raise ValueError("NfL half-life and healthy level must be > 0, release >= 0")
+        if not 0.0 <= self.nfl_distal_fraction <= 1.0:
+            raise ValueError("nfl_distal_fraction must be in [0, 1]")
+        if len(self.axon_length) != 4 or any(x < 0 for x in self.axon_length):
+            raise ValueError("axon_length needs four non-negative values")
         if not 0.0 <= self.residual_drive <= 1.0:
             raise ValueError("residual_drive must be in [0, 1]")
 

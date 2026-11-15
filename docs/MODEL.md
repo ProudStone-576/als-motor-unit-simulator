@@ -1,6 +1,6 @@
 # Model description
 
-This document specifies the model implemented in `mndsim` v0.1. It covers the state variables, equations, default parameters (and where each comes from), read-outs and numerical method. Code references point to `src/mndsim/`.
+This document specifies the model implemented in `mndsim` v0.2. It covers the state variables, equations, default parameters (and where each comes from), read-outs and numerical method. Code references point to `src/mndsim/`.
 
 Contents:
 
@@ -14,7 +14,9 @@ Contents:
 8. [Virtual population](#8-virtual-population-cohortpy)
 9. [In-silico trials](#9-in-silico-trials-trialpy)
 10. [Fitting and sensitivity](#10-fitting-and-sensitivity)
-11. [References](#11-references)
+11. [Neurofilament light and the hidden phase](#11-neurofilament-light-and-the-hidden-phase)
+12. [Browser engine](#12-browser-engine-webmndsimjs)
+13. [References](#13-references)
 
 ---
 
@@ -143,6 +145,7 @@ Library effect sizes are archetypes for exploring hypotheses. They are not estim
 | `type_survival` | surviving fraction of S, FR and FF units |
 | `items`, `alsfrs` | 12 items scored 0–4 (§5.1), total 0–48 |
 | `fvc` | 100 × respiratory `mvc` (% predicted) |
+| `nfl` | plasma neurofilament light, pg/mL on an illustrative scale (§11) |
 | `symptom_onset` | first time any region's `mvc` < 0.80 (interpolated within a step) |
 | `event_time` | first time `fvc` < 30%: "death or permanent assisted ventilation" |
 
@@ -242,8 +245,48 @@ Replicates resample a finite pool, so power estimates are conditional on that po
 
 **`global_sensitivity`** draws a Latin hypercube over patient parameters (log-uniform) and ranks each one's influence on each output with partial rank correlation coefficients (Marino et al. 2008). Outcomes not reached within the horizon are ranked as largest.
 
-## 11. References
+## 11. Neurofilament light and the hidden phase
 
+### 11.1 NfL release and clearance (`engine.py`)
+
+Neurofilament light chain is a structural protein of large axons. It enters blood when axons degenerate. In the model, release is proportional to the axonal material lost per unit time:
+
+- **Lower motor neurons.** Unit *i* contributes $a_i L_r$ "axon equivalents". Content scales with unit size, $a_i \propto f_i^{\,0.25}$ normalised to mean 1, and with the region's relative axon length $L_r$ (bulbar 0.25, respiratory 0.5, upper limb 0.8, lower limb 1.0). A fraction $\phi = 0.3$ is released when the unit starts dying back (H → G, distal axon) and the rest when it is lost (G → X). Rescued units release nothing more.
+- **Upper motor neurons.** A region's whole UMN population holds 150 equivalents, released in proportion to UMN loss.
+
+Plasma concentration follows first-order kinetics with healthy production and clearance:
+
+$$\frac{dC}{dt} = k\,(C_0(\text{age}) - C) + \kappa\, S(t), \qquad C_0 = 10\,e^{0.022(\text{age}-60)}\ \text{pg/mL}, \qquad k = \ln 2 / t_{1/2}$$
+
+*S* is the release rate in axon equivalents per month, κ = 3.3 pg/mL per equivalent per month, and $t_{1/2}$ = 1 month. The update is the exact solution over each step. The absolute scale is illustrative, so read NfL as a multiple of the healthy level for age.
+
+With these settings the virtual population (not tuned for NfL beyond the overall scale) shows:
+
+- a median NfL at diagnosis of about 4.5× healthy;
+- a correlation with the progression rate ΔFS of r ≈ 0.5;
+- a slow decline of about 13% over the year after diagnosis;
+- NfL that **doubles a median of 11 months before the first symptom** (IQR 5–17 months). This is consistent with prospective studies of gene carriers that report NfL rising in the months to about a year before clinical onset.
+
+### 11.2 Analyses (`hidden_phase.py`)
+
+- **`response_lag`** compares one patient with and without a treatment started at canonical stages (6 months before symptoms, at symptom onset, at diagnosis, one year later). It reports months until NfL first falls 15% below untreated, months until function is first 1 point better, the maximum NfL reduction, and months gained before respiratory failure.
+- **`power_by_duration`** (`trial.py`) builds one trial pool with the longest follow-up, then re-analyses replicate trials truncated at shorter lengths. Patterns of power across endpoints and durations act as mechanism *fingerprints*:
+  - Disease-modifying treatments are detected first by NfL, then by function.
+  - Symptomatic treatments are detected early by function and never by NfL.
+- **`trigger_strategies`** samples presymptomatic gene carriers (`carrier_population`).
+  - Monitoring starts 2 years before biological onset, with blood draws every 3 months.
+  - Each draw has a log-normal visit-to-visit CV of 0.15, and people's healthy NfL varies by CV 0.3.
+  - A `MonitoringRule` fires when measured NfL exceeds a threshold times a personal baseline (mean of the first two draws) or the population reference. By default, two consecutive draws must be above threshold.
+  - Treatment started at the trigger is compared with starting at symptom onset or at diagnosis. Pre-treatment trajectories are identical across strategies by construction.
+- **`false_trigger_rate`** and **`threshold_tradeoff`** estimate how often a rule fires in carriers who never convert. They include the slow age-related rise in healthy NfL.
+
+## 12. Browser engine (`web/mndsim.js`)
+
+The web app runs a dependency-free JavaScript port of the engine. It simulates one patient at a time, which allows per-patient early stopping, and uses the same equations, operation order and 2,049-point force table as the Python engine. `web/tests/make_golden.py` records trajectories from the Python engine, including each patient's unit vulnerabilities. `web/tests/parity.test.mjs` requires the JavaScript engine to reproduce them; the observed worst relative difference is about 1e-9. Random numbers differ between the two engines (seeded mulberry32 in JavaScript), so stochastic runs and sampled cohorts agree statistically, not draw for draw.
+
+## 13. References
+
+- Benatar M, Wuu J, Andersen PM, Lombardi V, Malaspina A. Neurofilament light: a candidate biomarker of presymptomatic amyotrophic lateral sclerosis and phenoconversion. *Ann Neurol* 2018;84:130–139.
 - Berry JD, Miller R, Moore DH, et al. The Combined Assessment of Function and Survival (CAFS): a new endpoint for ALS clinical trials. *Amyotroph Lateral Scler Frontotemporal Degener* 2013;14:162–168.
 - Cedarbaum JM, Stambler N, Malta E, et al. The ALSFRS-R: a revised ALS functional rating scale that incorporates assessments of respiratory function. *J Neurol Sci* 1999;169:13–21.
 - Eisen A, Kim S, Pant B. Amyotrophic lateral sclerosis (ALS): a phylogenetic disease of the corticomotoneuron? *Muscle Nerve* 1992;15:219–224.
@@ -251,8 +294,10 @@ Replicates resample a finite pool, so power estimates are conditional on that po
 - Frey D, Schneider C, Xu L, Borg J, Spooren W, Caroni P. Early and selective loss of neuromuscular synapse subtypes with low sprouting competence in motoneuron diseases. *J Neurosci* 2000;20:2534–2542.
 - Fuglevand AJ, Winter DA, Patla AE. Models of recruitment and rate coding organization in motor-unit pools. *J Neurophysiol* 1993;70:2470–2488.
 - Henneman E. Relation between size of neurons and their susceptibility to discharge. *Science* 1957;126:1345–1347.
+- Khalil M, Teunissen CE, Otto M, et al. Neurofilaments as biomarkers in neurological disorders. *Nat Rev Neurol* 2018;14:577–589.
 - Kimura F, Fujimura C, Ishida S, et al. Progression rate of ALSFRS-R at time of diagnosis predicts survival time in ALS. *Neurology* 2006;66:265–267.
 - Marino S, Hogue IB, Ray CJ, Kirschner DE. A methodology for performing global uncertainty and sensitivity analysis in systems biology. *J Theor Biol* 2008;254:178–196.
+- Miller TM, Cudkowicz ME, Genge A, et al. Trial of antisense oligonucleotide tofersen for SOD1 ALS. *N Engl J Med* 2022;387:1099–1110.
 - Pun S, Santos AF, Saxena S, Xu L, Caroni P. Selective vulnerability and pruning of phasic motoneuron axons in motoneuron disease alleviated by CNTF. *Nat Neurosci* 2006;9:408–419.
 - Ravits JM, La Spada AR. ALS motor phenotype heterogeneity, focality, and spread: deconstructing motor neuron degeneration. *Neurology* 2009;73:805–811.
 - Vucic S, Nicholson GA, Kiernan MC. Cortical hyperexcitability may precede the onset of familial amyotrophic lateral sclerosis. *Brain* 2008;131:1540–1550.

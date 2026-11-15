@@ -4,21 +4,61 @@
 ![Python](https://img.shields.io/badge/python-3.10%E2%80%933.13-blue)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
-**A mechanistic, open simulator of motor neuron disease (ALS/MND), from single motor units to virtual clinical trials.**
+**An open, mechanistic simulator of ALS / motor neuron disease, from single motor units to virtual clinical trials, in Python and in your browser.**
 
-`mndsim` models what happens inside a muscle as motor neurons die. It follows every motor unit, the collateral reinnervation that hides the loss, the upper-motor-neuron input that drives and stresses them, and the spread of disease across the body. It turns all of this into the measures clinicians and trialists actually use: a 48-point functional score, FVC, motor unit number estimates (MUNE), CMAP amplitude and survival.
+`mndsim` follows every motor unit in a muscle as motor neurons die:
 
-Use it to:
+- the collateral reinnervation that hides the loss;
+- the upper motor neurons that drive and stress them;
+- the spread of disease across the body;
+- the neurofilament released into blood by dying axons.
 
-- **Understand.** See why roughly half of a muscle's motor units are gone before a patient notices weakness, and why fast-fatigable units die first.
-- **Ask "what if".** Run the same virtual patient under different treatment mechanisms and start times.
-- **Design trials.** Simulate thousands of randomised trials to compare endpoints, sample sizes, durations and enrichment strategies, including type-I-error checks.
-- **Build digital twins.** Fit a virtual patient to someone's visit history (functional score, FVC, MUNE), then explore counterfactual treatments.
+It turns all of this into the measures clinicians and trialists use: a 48-point functional score, FVC, motor unit number estimates (MUNE), CMAP, blood neurofilament light (NfL) and survival.
 
 > [!IMPORTANT]
 > `mndsim` is a **research and teaching tool**. Parameters are illustrative and calibrated only to population-level summaries from the literature (see [Calibration](#calibration)). It does not predict the course of any real person and is not medical advice.
 
-![Overview of a simulated disease course](docs/images/overview.png)
+## Try it in your browser: *Inside ALS*
+
+[![Inside ALS web app](docs/images/web_app.png)](https://proudstone-576.github.io/motor-unit-degeneration-simulator/)
+
+**[proudstone-576.github.io/motor-unit-degeneration-simulator](https://proudstone-576.github.io/motor-unit-degeneration-simulator/)** needs no installation and works on a phone. The whole engine runs locally in the browser, from a JavaScript port that a CI test holds to the Python engine's numbers. The app has four parts:
+
+- **A live muscle biopsy.** About 1,300 fibres coloured like an ATPase stain. Watch neurons die, fibres shrink, and survivors adopt orphans until *fibre-type grouping* appears, the classic sign of chronic denervation. The amount of denervation matches the engine month by month.
+- **The hidden phase.** Neuron loss, strength, function and blood NfL on one timeline, with sliders for speed, spread and compensation.
+- **Treatment timing.** The same patient under six mechanisms, started anywhere from before symptoms to years after.
+- **A virtual trial designer.** Choose a mechanism, size, length and enrichment. Hundreds of virtual patients are screened, and replicate trials estimate power for five endpoints.
+
+(Maintainers: enable *Settings → Pages → Source: GitHub Actions* once, and the app redeploys on every push to `main`. You can also run `python web/build_site.py` and serve `_site/`.)
+
+## The hidden phase: what the model predicts
+
+Motor neurons die for many months before symptoms because survivors reinnervate orphaned fibres. NfL reports the **rate** of axonal loss; function reports the **state** left after compensation. Building both into one mechanism yields testable predictions. These are model results under illustrative parameters, reproducible with `python examples/make_figures.py`.
+
+![The hidden phase](docs/images/hidden_phase.png)
+
+**1. Loss is hidden, but not invisible.** When weakness first appears, about half of the region's motor neurons are already gone (median 48% in the virtual population). Blood NfL doubles a **median of 11 months before the first symptom** (IQR 5–17). This was not tuned: it emerges from the mechanism and agrees with prospective studies of gene carriers (Benatar et al. 2018).
+
+**2. Each mechanism leaves a fingerprint across endpoints and time.** The figure below shows simulated power with 60 patients per arm. A disease-modifying drug (left) is detected first by NfL: 44% power at 3 months and 71% at 6 months, versus 14% and 55% for the functional slope. Function overtakes NfL only in longer trials. A purely symptomatic drug (right) is the mirror image: function catches it immediately (76% at 3 months, fading as the slope dilutes a one-time jump), while NfL never moves. This is the pattern seen when an antisense therapy cut NfL but missed its 28-week functional endpoint (Miller et al. 2022). A mechanism that only nudges the rate of axon loss (the anti-excitotoxic archetype) is the reverse case: function beats NfL. The model tells you which situation you are in *before* you run the trial.
+
+![Endpoint fingerprints](docs/images/fingerprints.png)
+
+**3. Timing beats almost everything else.** The figure below covers 400 virtual SOD1 carriers on a gene-targeted therapy. Waiting for a formal diagnosis roughly halves the benefit compared with starting at the first symptom: median function two years after symptom onset is 28 versus 38 out of 48, against 20 untreated. Monitoring NfL every 3 months and starting when it doubles from the person's own baseline treats about 73% of carriers before any symptom (median function 40). Over 10 years, that rule falsely alarms in 0.3% of carriers who never convert. Lowering the threshold to 1.5× catches only a few more people early but raises false alarms to 26%, partly because healthy NfL drifts up with age.
+
+![NfL-triggered prevention](docs/images/prevention.png)
+
+Run these analyses yourself:
+
+```python
+from mndsim import hidden_phase as hp, TREATMENTS, TrialDesign, build_trial_pool, power_by_duration
+from mndsim.phenotypes import TYPICAL
+
+hp.response_lag(TYPICAL, TREATMENTS["neuroprotective"])  # NfL vs function response, by start stage
+pool = build_trial_pool(TREATMENTS["neuroprotective"], TrialDesign(n_per_arm=60, duration=18))
+power_by_duration(pool, [3, 6, 12, 18])  # endpoint fingerprints
+hp.trigger_strategies(TREATMENTS["gene_targeted"]).summary()  # NfL-triggered prevention
+hp.threshold_tradeoff()  # lead time vs false alarms
+```
 
 ---
 
@@ -42,7 +82,7 @@ from mndsim.phenotypes import TYPICAL
 
 result = mndsim.simulate(TYPICAL, months=72)  # one virtual patient, 6 years
 result.summary()  # symptom onset, survival, slopes, MU loss...
-result.plot()  # the figure above
+result.plot()  # six-panel overview, shown below
 df = result.to_frame()  # tidy table: one row per month
 
 # Same patient, neuroprotection started at diagnosis
@@ -51,10 +91,14 @@ treated = mndsim.simulate(TYPICAL, mndsim.TREATMENTS["neuroprotective"].at(onset
 print(treated.event_time - result.event_time)  # months gained to respiratory failure
 ```
 
+![Overview of a simulated disease course](docs/images/overview.png)
+
 Or from the command line:
 
 ```bash
 mndsim list                                          # phenotypes and treatment archetypes
+mndsim lag --phenotype typical --treatment neuroprotective   # biomarker vs function response
+mndsim prevention --threshold 2 --plot prevention.png        # NfL-triggered treatment in carriers
 mndsim simulate --phenotype bulbar_onset --treatment neuroprotective --plot course.png
 mndsim compare neuroprotective nmj_stabilizer symptomatic --start-after-onset 6 --plot cf.png
 mndsim cohort --n 1000 --csv cohort.csv --plot cohort.png
@@ -63,7 +107,7 @@ mndsim fit visits.csv --fvc-col fvc --onset-region bulbar --forecast neuroprotec
 mndsim sensitivity --plot tornado.png
 ```
 
-There is also a point-and-click app:
+Besides the browser app, there is a Streamlit explorer for local use:
 
 ```bash
 streamlit run app/streamlit_app.py
@@ -83,6 +127,7 @@ Each of four regions (bulbar, respiratory, upper limb, lower limb) has its own p
 | **Upper motor neuron loss** | Lowers maximal voluntary drive to each pool | — |
 | **Excitotoxicity ("dying forward")** | Glutamatergic drive from surviving UMNs amplifies LMN hazard | Eisen et al. 1992; Vucic et al. 2008 |
 | **Focal onset and contiguous spread** | Disease reaches regions with a delay proportional to neuraxis distance | Ravits & La Spada 2009 |
+| **Blood neurofilament light** | Released by degenerating LMN and UMN axons in proportion to axon size and length; healthy level rises with age; first-order clearance | Khalil et al. 2018 |
 | **Clinical read-outs** | 12-item, 48-point functional score modelled on the ALSFRS-R structure; FVC; MUNE; CMAP; MUP size; respiratory-failure event | Cedarbaum et al. 1999 |
 
 Simulations are **mean-field** (expected trajectories, deterministic) or **stochastic** (individual unit fates, giving the step-wise MUNE decrements seen in serial studies). Both run vectorised over patients × regions × units; a 3,000-patient, 20-year cohort takes about half a minute on a laptop.
@@ -216,6 +261,9 @@ The defaults were tuned so the virtual population reproduces commonly reported, 
 | Progression rate at diagnosis, ΔFS (median) | 0.83 points/month | strongly prognostic (Kimura et al. 2006) |
 | Functional score at diagnosis (median) | 39 / 48 | high 30s in trial populations |
 | Motor units lost when weakness appears (median) | 48% | substantial loss precedes weakness |
+| NfL at diagnosis (median, × healthy for age) | 4.5× | several-fold above controls |
+| NfL doubling before first symptom (median) | 11 months (not tuned) | rises in the months to about a year before onset in carriers (Benatar et al. 2018) |
+| Correlation of NfL with progression rate ΔFS | r ≈ 0.5 | moderate, prognostic |
 
 Treat any single number as one model's output under stated assumptions, not as a fact about ALS.
 
@@ -228,6 +276,7 @@ Read these before drawing conclusions:
 - **Survival is too predictable.** Survival correlates with ΔFS at r ≈ −0.92, far stronger than in real cohorts, because there is no unmodelled clinical variability (care, comorbidity, intercurrent illness).
 - **FVC is a proxy.** It equals respiratory pool strength. The lower tail of FVC at diagnosis is probably too heavy; FVC < 70% is the main reason for the roughly 35% trial screen-failure rate.
 - **The functional score mimics the structure of the ALSFRS-R, not the instrument.** Item thresholds are illustrative.
+- **NfL is on an illustrative scale.** Release weights and clearance half-life are assumptions. Bulbar-onset NfL comes out slightly *lower* than limb onset (short axons), whereas real cohorts often show the opposite. Read NfL as a multiple of healthy, not in absolute pg/mL.
 - **Treatment effects are mechanism archetypes.** They have no pharmacokinetics beyond first-order ramp and washout.
 - **Calibration matches population summaries only.** Individual-level validity (for example, of fitted twins) is untested on real data.
 - **No cognition or behaviour.** The frontotemporal spectrum is outside scope.
@@ -238,13 +287,15 @@ Issues and pull requests that address these are very welcome.
 
 ```
 src/mndsim/
-  pool.py         motor-unit pool (size principle, force)        engine.py      vectorised simulator
+  pool.py         motor-unit pool (size principle, force)        engine.py      vectorised simulator (incl. NfL)
+  hidden_phase.py biomarker lag, NfL-triggered prevention         
   patient.py      Patient parameters                             result.py      SimulationResult
   phenotypes.py   preset patients                                treatment.py   mechanism-based treatments
   cohort.py       population model                               trial.py       in-silico RCTs, power
   fitting.py      digital-twin fitting                           sensitivity.py LHS + PRCC, sweeps
   scoring.py      functional score, FVC                          plotting.py    figures
   config.py       physiological constants                        cli.py         `mndsim` command
+web/              "Inside ALS" browser app + JavaScript engine (mndsim.js) and its parity test
 app/              Streamlit explorer
 examples/         runnable scripts (quick start, counterfactuals, trial design, digital twin, figures)
 docs/MODEL.md     model equations, parameters and references

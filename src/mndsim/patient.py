@@ -153,6 +153,7 @@ class PatientBatch:
     max_enlargement: np.ndarray  # (P,)
     regional_onset: np.ndarray  # (P, R)
     genotype: np.ndarray  # (P,) object
+    age: np.ndarray  # (P,)
 
     @classmethod
     def from_patients(cls, patients: Patient | Sequence[Patient]) -> PatientBatch:
@@ -171,6 +172,7 @@ class PatientBatch:
             max_enlargement=np.array([p.max_enlargement for p in patients], dtype=float),
             regional_onset=np.array([p.regional_onset_times() for p in patients]),
             genotype=np.array([p.genotype for p in patients], dtype=object),
+            age=np.array([p.age_at_onset for p in patients], dtype=float),
         )
 
     def __len__(self) -> int:
@@ -188,4 +190,5 @@ class PatientBatch:
             max_enlargement=self.max_enlargement[idx],
             regional_onset=self.regional_onset[idx],
             genotype=self.genotype[idx],
+            age=self.age[idx],
         )

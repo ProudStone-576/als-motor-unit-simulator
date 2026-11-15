@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.2.0 — 2026-11-15
+
+The hidden phase, and a zero-install web app.
+
+### Added
+- **Plasma neurofilament light (NfL)** as a mechanistic read-out. It is released by degenerating lower and upper motor neuron axons (weighted by axon size and length), with age-dependent healthy levels and first-order clearance. Without tuning beyond the overall scale, the virtual population shows NfL doubling a median of 11 months before symptoms and correlating with progression rate (r ≈ 0.5).
+- `mndsim.hidden_phase`:
+  - `response_lag` (biomarker vs functional response to treatment, by start stage);
+  - `trigger_strategies`, `MonitoringRule`, `false_trigger_rate` and `threshold_tradeoff` (NfL-triggered treatment in presymptomatic carriers).
+- Trials:
+  - an NfL endpoint (treated/control geometric mean ratio);
+  - `min_nfl_fold` enrichment;
+  - `run_trials(..., duration=)` and `power_by_duration` for endpoint fingerprints across trial lengths.
+- Summary columns `nfl_at_diagnosis`, `nfl_fold_at_diagnosis` and `nfl_lead_time`.
+- New figures (`plot_hidden_phase`, `plot_power_by_duration`, `plot_prevention`) and CLI commands `mndsim lag` and `mndsim prevention`.
+- **Browser engine** `web/mndsim.js`: a dependency-free port that reproduces the Python engine to about 1e-9 (golden-file parity test in CI), with browser-sized cohorts and trials.
+- **Web app** "Inside ALS" (`web/`):
+  - a live simulated muscle biopsy that shows fibre-type grouping, matched quantitatively to the engine's denervation;
+  - hidden-phase charts and a treatment-timing comparison;
+  - a virtual trial designer running in a Web Worker.
+- GitHub Pages deployment workflow.
+
+
 ## 0.1.0 — 2026-11-15
 
 A complete rewrite of the original prototype as an installable, tested package (`mndsim`).

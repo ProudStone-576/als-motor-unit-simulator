@@ -14,8 +14,10 @@ git clone https://github.com/ProudStone-576/motor-unit-degeneration-simulator
 cd motor-unit-degeneration-simulator
 python -m venv .venv && source .venv/bin/activate      # Windows: .venv\Scripts\activate
 pip install -e ".[dev,app]"
-pytest                       # about 30 s
+pytest                       # about 45 s
 ruff check . && ruff format --check .
+python web/tests/make_golden.py && node --test web/tests/parity.test.mjs   # browser engine parity
+python web/build_site.py && python -m http.server -d _site 8000          # preview the web app
 ```
 
 ## Ground rules
@@ -28,9 +30,10 @@ ruff check . && ruff format --check .
    - regenerate figures with `python examples/make_figures.py`;
    - update `docs/MODEL.md`.
 3. **Test invariants, not just numbers.** Good tests check properties that must hold whatever the parameter values: fibre conservation, monotonicity, placebo equals untreated, mean-field equals the stochastic average, type-I error control.
-4. **Keep the engine vectorised.** No per-patient Python loops in the hot path. Check speed with a 1,000-patient cohort before and after.
-5. **No real patient data in the repository.** Example data must be synthetic and labelled as such.
-6. **Public functions need docstrings** that state units (months, % predicted, fraction of baseline).
+4. **Keep the two engines in sync.** The browser app runs `web/mndsim.js`, a port of the Python engine. If you change the model, change both, then run `python web/tests/make_golden.py && node --test web/tests/parity.test.mjs`. CI runs this parity check on every push.
+5. **Keep the engine vectorised.** No per-patient Python loops in the hot path. Check speed with a 1,000-patient cohort before and after.
+6. **No real patient data in the repository.** Example data must be synthetic and labelled as such.
+7. **Public functions need docstrings** that state units (months, % predicted, fraction of baseline).
 
 ## Pull requests
 

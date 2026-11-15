@@ -53,6 +53,11 @@ class SimulationResult:
         Expected synthetic functional item scores (0-4) and total (0-48).
     fvc:
         Respiratory capacity, % predicted.
+    nfl:
+        Plasma neurofilament light chain (pg/mL, illustrative scale): released
+        by degenerating lower and upper motor neuron axons in proportion to
+        their size and length, and cleared from blood. It reports the *rate*
+        of neurodegeneration, not the accumulated damage.
     symptom_onset:
         Months from disease onset to first noticeable weakness (NaN if never).
     symptom_region:
@@ -79,6 +84,7 @@ class SimulationResult:
     items: np.ndarray
     alsfrs: np.ndarray
     fvc: np.ndarray
+    nfl: np.ndarray
     symptom_onset: np.ndarray
     symptom_region: np.ndarray
     event_time: np.ndarray
@@ -177,6 +183,14 @@ class SimulationResult:
                     self.pool.n_units
                 )
                 cmap_at_onset[p] = interpolate_at(self.time, self.cmap[p, :, r], onset[p])
+        nfl_dx = self.value_at("nfl", diagnosis)
+        baseline = self.nfl[:, 0]
+        lead = np.array(
+            [
+                onset[p] - time_to_threshold(self.time, self.nfl[p], 2.0 * baseline[p], direction="above")
+                for p in range(self.n_patients)
+            ]
+        )
         t_half = np.array(
             [time_to_threshold(self.time, self.alsfrs[p], 24.0) for p in range(self.n_patients)]
         )
@@ -194,6 +208,9 @@ class SimulationResult:
                 "diagnosis_months": diagnosis,
                 "alsfrs_at_diagnosis": score_dx,
                 "delta_fs": (self.max_score - score_dx) / (diagnosis - onset),
+                "nfl_at_diagnosis": nfl_dx,
+                "nfl_fold_at_diagnosis": nfl_dx / baseline,
+                "nfl_lead_time": lead,
                 "event_months": self.event_time,
                 "survival_from_symptom_onset": self.survival_from_symptom_onset,
                 "months_to_half_function": t_half,
