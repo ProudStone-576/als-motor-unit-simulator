@@ -29,7 +29,7 @@ It turns all of this into the measures clinicians and trialists use: a 48-point 
 - **Treatment timing.** The same patient under six mechanisms, started anywhere from before symptoms to years after.
 - **A virtual trial designer.** Choose a mechanism, size, length and enrichment. Hundreds of virtual patients are screened, and replicate trials estimate power for five endpoints.
 
-(Maintainers: enable *Settings → Pages → Source: GitHub Actions* once, and the app redeploys on every push to `main`. You can also run `python web/build_site.py` and serve `_site/`.)
+(Maintainers: enable *Settings → Pages → Source: GitHub Actions* once, and the app redeploys on every push to `main`. It also deploys to Vercel as-is: import the repository at [vercel.com/new](https://vercel.com/new) and `vercel.json` handles the build. To run it locally: `node web/build_site.mjs`, then serve `_site/` with any static server.)
 
 ## The hidden phase: what the model predicts
 

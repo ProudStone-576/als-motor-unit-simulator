@@ -17,7 +17,7 @@ pip install -e ".[dev,app]"
 pytest                       # about 45 s
 ruff check . && ruff format --check .
 python web/tests/make_golden.py && node --test web/tests/parity.test.mjs   # browser engine parity
-python web/build_site.py && python -m http.server -d _site 8000          # preview the web app
+node web/build_site.mjs && python -m http.server -d _site 8000           # preview the web app
 ```
 
 ## Ground rules
