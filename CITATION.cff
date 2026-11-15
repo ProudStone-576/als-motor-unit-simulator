@@ -1,0 +1,27 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+title: "mndsim: a mechanistic motor-unit degeneration simulator for ALS/MND"
+type: software
+authors:
+  - given-names: Taranjeet Singh
+    family-names: Matharu
+version: 0.1.0
+date-released: 2026-11-15
+license: MIT
+repository-code: "https://github.com/ProudStone-576/motor-unit-degeneration-simulator"
+keywords:
+  - amyotrophic lateral sclerosis
+  - motor neuron disease
+  - motor unit
+  - disease progression model
+  - in-silico clinical trial
+  - computational neuroscience
+abstract: >-
+  mndsim simulates motor neuron disease from single motor units to virtual
+  clinical trials. It models a size-ordered motor-unit pool per body region,
+  selective vulnerability, dying-back denervation, collateral reinnervation,
+  upper-motor-neuron loss with excitotoxic drive and contiguous spread, and
+  derives functional scores, FVC, motor unit number estimates, CMAP and
+  survival. It supports counterfactual treatments, heterogeneous virtual
+  cohorts, power analysis for randomised trials, fitting of digital twins
+  and global sensitivity analysis.
