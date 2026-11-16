@@ -36,3 +36,7 @@ outputs/
 *.csv
 !examples/data/*.csv
 _site/
+
+# Hallmark design tooling: keep the build log, ignore screenshots and comparisons
+.hallmark/*
+!.hallmark/log.json

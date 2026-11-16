@@ -3,7 +3,7 @@ import * as M from "./mndsim.js";
 
 const $ = (id) => document.getElementById(id);
 const css = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
-const fmt = (v, d = 0) => (Number.isFinite(v) ? v.toFixed(d) : "–");
+const fmt = (v, d = 0) => (Number.isFinite(v) ? v.toFixed(d) : "n/a");
 
 // ---------------------------------------------------------------------------
 // Shared state
@@ -94,7 +94,22 @@ function drawChart(container) {
   container.innerHTML = "";
   const W = Math.max(container.clientWidth, 280);
   const H = cfg.height || 250;
-  const m = { l: 40, r: 14, t: 18, b: 34 };
+  // Marker labels sit in their own rows above the plot, so they never cross a curve.
+  const marks = (cfg.markers || []).filter((mk) => Number.isFinite(mk.x) && mk.x >= cfg.xDomain[0] && mk.x <= cfg.xDomain[1]);
+  const rowEnds = [];
+  const placed = [];
+  const plotW0 = W - 40 - 14;
+  for (const mk of [...marks].sort((a, b) => a.x - b.x)) {
+    const px = 40 + ((mk.x - cfg.xDomain[0]) / (cfg.xDomain[1] - cfg.xDomain[0])) * plotW0;
+    const w = mk.label.length * 6.4 + 8;
+    const flip = px + w > W - 14;
+    const a = flip ? px - w : px;
+    let r = rowEnds.findIndex((end) => end < a);
+    if (r < 0) r = rowEnds.push(-Infinity) - 1;
+    rowEnds[r] = a + w;
+    placed.push({ mk, r, flip });
+  }
+  const m = { l: 40, r: 14, t: 18 + (rowEnds.length ? 15 * rowEnds.length : 0), b: 34 };
   const [x0, x1] = cfg.xDomain;
   const [y0, y1] = cfg.yDomain;
   const sx = (x) => m.l + ((x - x0) / (x1 - x0)) * (W - m.l - m.r);
@@ -121,16 +136,17 @@ function drawChart(container) {
   el("line", { x1: m.l, x2: W - m.r, y1: H - m.b, y2: H - m.b, stroke: "var(--muted)", "stroke-width": 1 }, svg);
   const xl = el("text", { x: W - m.r, y: H - 4, "text-anchor": "end" }, svg);
   xl.textContent = cfg.xLabel || "";
+  const onTop = [];
   for (const h of cfg.hlines || []) {
     el("line", { x1: m.l, x2: W - m.r, y1: sy(h.y), y2: sy(h.y), stroke: "var(--muted)", "stroke-width": 1, "stroke-dasharray": "3 3" }, svg);
-    const t = el("text", { x: W - m.r, y: sy(h.y) - 4, "text-anchor": "end" }, svg);
+    const t = el("text", { x: W - m.r, y: sy(h.y) - 4, "text-anchor": "end", class: "halo" }, svg);
     t.textContent = h.label;
+    onTop.push(t);
   }
-  let row = 0;
-  for (const mk of cfg.markers || []) {
-    if (!Number.isFinite(mk.x) || mk.x < x0 || mk.x > x1) continue;
-    el("line", { x1: sx(mk.x), x2: sx(mk.x), y1: m.t, y2: H - m.b, stroke: "var(--ink-2)", "stroke-width": 1, opacity: 0.55 }, svg);
-    const t = el("text", { x: sx(mk.x) + 4, y: m.t + 26 + 13 * (row++ % 3), fill: "var(--ink-2)" }, svg);
+  for (const { mk, r, flip } of placed) {
+    const ty = 14 + 15 * r;
+    el("line", { x1: sx(mk.x), x2: sx(mk.x), y1: ty + 4, y2: H - m.b, stroke: "var(--ink-2)", "stroke-width": 1, opacity: 0.55 }, svg);
+    const t = el("text", { x: sx(mk.x) + (flip ? -4 : 4), y: ty, fill: "var(--ink-2)", "text-anchor": flip ? "end" : "start" }, svg);
     t.textContent = mk.label;
   }
   for (const s of cfg.series) {
@@ -148,6 +164,7 @@ function drawChart(container) {
     }
     el("path", { d, fill: "none", stroke: s.color, "stroke-width": s.width || 2, "stroke-linejoin": "round", "stroke-linecap": "round", "stroke-dasharray": s.dash || "" }, svg);
   }
+  for (const t of onTop) svg.appendChild(t); // reference-line labels read above the curves
   // Hover layer
   const cross = el("line", { y1: m.t, y2: H - m.b, stroke: "var(--ink-2)", "stroke-width": 1, visibility: "hidden" }, svg);
   const dots = cfg.series.map((s) => el("circle", { r: 4, fill: s.color, stroke: "var(--surface)", "stroke-width": 2, visibility: "hidden" }, svg));
@@ -538,19 +555,19 @@ function runHidden() {
   const xDomain = [-onset, Math.min(x[x.length - 1], 60)];
   const bands = [{ x0: -onset, x1: 0, label: "hidden phase" }];
   const A = [
-    { label: `Motor neurons alive (${region})`, color: "var(--s1)", x, y: mu },
-    { label: `Strength (${region})`, color: "var(--s2)", x, y: mvc },
-    { label: "Daily-function score", color: "var(--s3)", x, y: fn },
+    { label: `Motor neurons alive (${region})`, color: "var(--series-argue)", x, y: mu },
+    { label: `Strength (${region})`, color: "var(--series-ink)", x, y: mvc },
+    { label: "Daily-function score", color: "var(--series-ink-2)", x, y: fn, dash: "6 4" },
   ];
   legend($("lg-a"), A);
   lineChart($("chart-a"), {
-    series: A, xDomain, yDomain: [0, 100], bands, markers, yFormat: (v) => `${v}%`,
+    series: A, xDomain, yDomain: [0, 100], bands, markers, yFormat: (v) => `${v}%`, height: 380,
     xLabel: "months from first symptom", valueFormat: (v) => `${fmt(v)}%`, aria: "Motor neurons, strength and function over time",
   });
-  const B = [{ label: "Blood NfL", color: "var(--s5)", x, y: nfl }];
+  const B = [{ label: "Blood NfL", color: "var(--series-argue)", x, y: nfl }];
   legend($("lg-b"), B);
   lineChart($("chart-b"), {
-    series: B, xDomain, yDomain: [0, Math.max(4, Math.ceil(Math.max(...nfl)))], bands, markers,
+    series: B, xDomain, yDomain: [0, Math.max(4, Math.ceil(Math.max(...nfl)))], bands, markers, height: 300,
     hlines: [{ y: 2, label: "doubled" }], yFormat: (v) => `${v}×`, xLabel: "months from first symptom",
     valueFormat: (v) => `${fmt(v, 1)}×`, aria: "Blood NfL over time",
   });
@@ -602,7 +619,7 @@ function runTreat() {
   const at24 = (y) => M.interpolateAt(base.time, y, onset + 24);
   const geneMismatch = state.mechanism === "gene_targeted" && pat.genotype !== "SOD1";
   tiles.innerHTML = [
-    ["Breathing failure delayed by", Number.isFinite(gain) ? `${gain >= 0 ? "+" : ""}${fmt(gain, 1)} mo` : "–", "vs the same patient untreated"],
+    ["Breathing failure delayed by", Number.isFinite(gain) ? `${gain >= 0 ? "+" : ""}${fmt(gain, 1)} mo` : "n/a", "vs the same patient untreated"],
     ["Blood NfL lowered by up to", `${fmt(100 * maxDrop)}%`, Number.isFinite(nflLag) ? `15% lower within ${fmt(nflLag)} months` : "never 15% lower"],
     ["Function 2 years after symptoms", `${fmt(at24(fnT))} vs ${fmt(at24(fnU))}`, "treated vs untreated, out of 48"],
     ["Function 2 points better after", Number.isFinite(fnLag) ? `${fmt(fnLag)} mo` : "never", "from the day treatment starts"],
@@ -610,17 +627,17 @@ function runTreat() {
   const xDomain = [Math.max(-onset, -18), 60];
   const markers = [{ x: start - onset, label: "treatment starts" }, { x: 0, label: "symptoms" }];
   const C = [
-    { label: "Untreated", color: "var(--neutral-series)", x, y: Array.from(fnU), dash: "5 4" },
-    { label: MECH_LABELS[state.mechanism], color: "var(--s1)", x, y: Array.from(fnT) },
+    { label: "Untreated", color: "var(--series-muted)", x, y: Array.from(fnU), dash: "5 4" },
+    { label: MECH_LABELS[state.mechanism], color: "var(--series-argue)", x, y: Array.from(fnT) },
   ];
   legend($("lg-c"), C);
-  lineChart($("chart-c"), { series: C, xDomain, yDomain: [0, 48], markers, xLabel: "months from first symptom", valueFormat: (v) => fmt(v, 1), aria: "Function, treated vs untreated" });
+  lineChart($("chart-c"), { series: C, xDomain, yDomain: [0, 48], markers, height: 320, xLabel: "months from first symptom", valueFormat: (v) => fmt(v, 1), aria: "Function, treated vs untreated" });
   const D = [
-    { label: "Untreated", color: "var(--neutral-series)", x, y: Array.from(nU, (v) => v / nU[0]), dash: "5 4" },
-    { label: MECH_LABELS[state.mechanism], color: "var(--s5)", x, y: Array.from(nT, (v) => v / nU[0]) },
+    { label: "Untreated", color: "var(--series-muted)", x, y: Array.from(nU, (v) => v / nU[0]), dash: "5 4" },
+    { label: MECH_LABELS[state.mechanism], color: "var(--series-argue)", x, y: Array.from(nT, (v) => v / nU[0]) },
   ];
   legend($("lg-d"), D);
-  lineChart($("chart-d"), { series: D, xDomain, yDomain: [0, Math.max(4, Math.ceil(Math.max(...D[0].y.filter(Number.isFinite))))], markers, yFormat: (v) => `${v}×`, xLabel: "months from first symptom", valueFormat: (v) => `${fmt(v, 1)}×`, aria: "NfL, treated vs untreated" });
+  lineChart($("chart-d"), { series: D, xDomain, height: 320, yDomain: [0, Math.max(4, Math.ceil(Math.max(...D[0].y.filter(Number.isFinite))))], markers, yFormat: (v) => `${v}×`, xLabel: "months from first symptom", valueFormat: (v) => `${fmt(v, 1)}×`, aria: "NfL, treated vs untreated" });
   let note;
   if (geneMismatch) note = "<strong>No effect:</strong> this gene therapy only works in people with the SOD1 form. Pick the <em>Inherited SOD1</em> patient at the top to see it work.";
   else if (state.mechanism === "symptomatic") note = "<strong>Fingerprint of a symptomatic drug:</strong> function jumps as soon as treatment starts, but blood NfL does not move and the decline continues at the same speed.";
@@ -633,7 +650,8 @@ function runTreat() {
 // Virtual trial section (Web Worker)
 // ---------------------------------------------------------------------------
 const DURATIONS = [3, 6, 12, 18];
-const ENDPOINT_COLOURS = { alsfrs_slope: "var(--s1)", survival: "var(--s2)", mune_slope: "var(--s3)", fvc_slope: "var(--s4)", nfl: "var(--s5)" };
+const ENDPOINT_COLOURS = { alsfrs_slope: "var(--series-ink)", survival: "var(--series-muted)", mune_slope: "var(--series-ink-2)", fvc_slope: "var(--series-ink-2)", nfl: "var(--series-argue)" };
+const ENDPOINT_DASH = { survival: "2 4", fvc_slope: "6 4" };
 const trialState = { results: null, running: false, worker: null };
 
 function trialConfig() {
@@ -658,12 +676,13 @@ function renderTrial() {
   const series = M.ENDPOINTS.map((ep) => ({
     label: M.ENDPOINT_LABELS[ep],
     color: ENDPOINT_COLOURS[ep],
+    dash: ENDPOINT_DASH[ep],
     x: DURATIONS,
     y: DURATIONS.map((dd) => 100 * (res.results[dd].find((r) => r.endpoint === ep).power ?? NaN)),
   }));
   legend($("lg-e"), series);
   lineChart($("chart-e"), {
-    series, xDomain: [3, 18], yDomain: [0, 100], hlines: [{ y: 80, label: "80%" }], yFormat: (v) => `${v}%`,
+    series, xDomain: [3, 18], yDomain: [0, 100], hlines: [{ y: 80, label: "80%" }], yFormat: (v) => `${v}%`, height: 300,
     xLabel: "trial length, months", xFormat: (v) => `${v}-month trial`, valueFormat: (v) => (Number.isFinite(v) ? `${fmt(v)}%` : "n/a"),
     aria: "Power by trial length",
   });

@@ -3,288 +3,436 @@
 <meta name="description" content="An open, mechanistic simulator of ALS / motor neuron disease: watch motor neurons fail, see the hidden phase, test treatments and design virtual trials.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@500;600&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style>
-/* Layout: a long-scroll lab notebook. Each section pairs a short argument with a live instrument
-   (biopsy, time-course charts, treatment comparison, trial simulator) driven by the same engine. */
+/* Hallmark · shape: Conversational FAQ · genre: editorial · theme: Almanac (deal 2/3, seed research-teaching-instrument-als-8f3c·e1e224ed·2026-11-15·r0) · redesign: full · job: try · draw: 9182d4
+ * hero: Settled · nav: banner over a bar (swapped from search-led, the page has no search) · footer: colophon block (swapped from index columns, there is no sitemap) · imagery: the product, live (canvas biopsy and charts), no photographs · signature: the simulated ATPase biopsy as a printed atlas plate, losing motor neurons as it plays
+ * axes: mid/grotesk-sans/chromatic-magenta · posture: restrained · contrast: pass · fold: pass · v2.0.0 */
+/* Hallmark · pre-emit critique: P5 H4 E4 S5 R4 V4 · weakest: E, five live charts risk a page of small charts; each is set large on the sheet with one magenta series and the rest in ink */
+/* Hallmark · hero-review: fix · 5 findings · 5 resolved */
+/* Hallmark · reworded "Inside ALS" to "Half the neurons die before weakness shows." · hero review 4 (the owner's line leads) */
+/* Hallmark · reworded "Compensation hides the damage, and a blood test can see it" to "What happens in the hidden phase?" · shape: Conversational FAQ, the old head kept word for word as the answer's first line */
+/* Hallmark · reworded "Same patient, same drug, different timing" to "What if we treat?" · shape: Conversational FAQ, the old head kept word for word as the answer's first line */
+/* Hallmark · reworded "A mechanism you can read, test and change" to "How does the model work?" · shape: Conversational FAQ, the old head kept word for word as the answer's first line */
+@import url("./tokens.css");
+@import url("./base.css");
+
 :root {
-  --bg: #f4f5f7;            /* microscope lightbox */
-  --surface: #ffffff;
-  --surface-2: #eceef2;
-  --ink: #15171c;
-  --ink-2: #4b4f5a;
-  --muted: #80848f;
-  --rule: #dde0e6;
-  --accent: #3d36a8;        /* haematoxylin indigo: controls, focus */
-  --accent-ink: #ffffff;
-  --accent-soft: #e6e5f7;
-  --denerv: #c2336b;        /* eosin-magenta: denervated fibres, warnings */
-  --band: rgba(61, 54, 168, 0.07);
-  /* ATPase-stain fibre colours (slow dark, fast pale) */
-  --fibre-s: #2f241c;
-  --fibre-fr: #8b6a4f;
-  --fibre-ff: #d8c4a6;
-  --fibre-lost: #e9e3e6;
-  --endomysium: #f7f3ef;
-  /* validated categorical data palette */
-  --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --s4: #eda100; --s5: #e87ba4;
-  --neutral-series: #4b4f5a;
-  --font-display: "Bricolage Grotesque", "IBM Plex Sans", system-ui, sans-serif;
-  --font-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
-  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
-  --step--1: 0.8125rem; --step-0: 1rem; --step-1: 1.25rem; --step-2: 1.6rem; --step-3: 2.3rem; --step-4: 3.3rem;
-  --radius: 10px;
+  --chrome-h: 106px;
+  /* The biopsy plate: fibre types in ink steps, denervation in the one magenta. */
+  --fibre-s: var(--color-ink-2);
+  --fibre-fr: oklch(50% 0.022 245);
+  --fibre-ff: oklch(73% 0.016 245);
+  --fibre-lost: oklch(86.5% 0.010 245);
+  --endomysium: var(--color-sheet);
+  --denerv: var(--color-accent);
+  /* Chart roles: one argued series in magenta, the rest in ink steps. */
+  --series-argue: var(--color-accent);
+  --series-ink: var(--color-ink);
+  --series-ink-2: oklch(42% 0.030 245);
+  --series-muted: oklch(57% 0.020 245);
+  --band: oklch(88.5% 0.010 245);
+  /* Names the charting script reads. */
+  --rule: var(--color-rule); --muted: var(--color-muted); --ink-2: var(--color-ink-2); --surface: var(--color-sheet);
+  --s1: var(--series-ink); --s2: var(--series-ink-2); --s3: var(--series-muted); --s4: var(--series-ink-2); --s5: var(--series-argue);
+  --neutral-series: var(--series-muted);
 }
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --bg: #0f1116; --surface: #171a21; --surface-2: #1f232c; --ink: #eef0f4; --ink-2: #b9bdc8; --muted: #858a96;
-    --rule: #2a2f3a; --accent: #9b95f0; --accent-ink: #12121c; --accent-soft: #262445; --denerv: #f06a9b;
-    --band: rgba(155, 149, 240, 0.09);
-    --fibre-s: #d9c3a4; --fibre-fr: #9c7b5d; --fibre-ff: #4a3a2d; --fibre-lost: #232730; --endomysium: #12141a;
-    --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --s5: #d55181; --neutral-series: #b9bdc8;
-    color-scheme: dark;
-  }
-}
-:root[data-theme="dark"] {
-  --bg: #0f1116; --surface: #171a21; --surface-2: #1f232c; --ink: #eef0f4; --ink-2: #b9bdc8; --muted: #858a96;
-  --rule: #2a2f3a; --accent: #9b95f0; --accent-ink: #12121c; --accent-soft: #262445; --denerv: #f06a9b;
-  --band: rgba(155, 149, 240, 0.09);
-  --fibre-s: #d9c3a4; --fibre-fr: #9c7b5d; --fibre-ff: #4a3a2d; --fibre-lost: #232730; --endomysium: #12141a;
-  --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --s5: #d55181; --neutral-series: #b9bdc8;
-  color-scheme: dark;
-}
-* { box-sizing: border-box; }
-body { background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: var(--step-0); line-height: 1.55; }
-.wrap { max-width: 1120px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
-h1, h2, h3 { font-family: var(--font-display); text-wrap: balance; margin: 0; letter-spacing: -0.01em; }
-h1 { font-size: clamp(2.4rem, 6vw, var(--step-4)); line-height: 1.02; font-weight: 700; }
-h2 { font-size: clamp(1.6rem, 3.4vw, var(--step-3)); line-height: 1.1; font-weight: 700; }
-h3 { font-size: var(--step-1); font-weight: 500; }
-p { margin: 0; max-width: 65ch; }
-a { color: var(--accent); }
-.eyebrow { font-family: var(--font-mono); font-size: var(--step--1); text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
-.lede { font-size: var(--step-1); color: var(--ink-2); line-height: 1.45; }
-.num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
-header.top { padding-block: 20px 8px; }
-header.top .wrap { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
-.brand { font-family: var(--font-mono); font-size: var(--step--1); color: var(--ink-2); }
-.brand b { color: var(--ink); font-weight: 500; }
-.notice { font-size: var(--step--1); color: var(--ink-2); border: 1px solid var(--rule); border-radius: 999px; padding: 4px 12px; background: var(--surface); }
-section { padding-block: 56px; border-top: 1px solid var(--rule); }
-section.hero { border-top: 0; padding-block: 28px 56px; }
-.intro { display: grid; gap: 14px; margin-bottom: 26px; }
-.hero-grid { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr); gap: 28px; align-items: start; }
-@media (max-width: 860px) { .hero-grid { grid-template-columns: 1fr; } }
-.slide { background: var(--surface); border: 1px solid var(--rule); border-radius: var(--radius); padding: 14px; display: grid; gap: 10px; min-width: 0; }
-.slide canvas { width: 100%; max-width: 100%; aspect-ratio: 1 / 1; display: block; border-radius: 50%; }
-.slide-caption { font-size: var(--step--1); color: var(--ink-2); }
-.legend { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: var(--step--1); color: var(--ink-2); }
-.legend span { display: inline-flex; align-items: center; gap: 6px; }
-.sw { width: 12px; height: 12px; border-radius: 3px; display: inline-block; border: 1px solid var(--rule); }
-.sw.line { height: 3px; border: 0; border-radius: 2px; width: 16px; }
-.readout { display: grid; gap: 18px; min-width: 0; }
-.phase { display: inline-flex; align-items: center; gap: 8px; font-family: var(--font-mono); font-size: var(--step--1); letter-spacing: 0.04em; text-transform: uppercase; padding: 4px 10px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); width: fit-content; }
-.phase.symptomatic { background: color-mix(in srgb, var(--denerv) 14%, transparent); color: var(--denerv); }
-.phase .dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
-.stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
-.stat { background: var(--surface); border: 1px solid var(--rule); border-radius: var(--radius); padding: 12px 14px; display: grid; gap: 2px; min-width: 0; }
-.stat .label { font-size: var(--step--1); color: var(--ink-2); }
-.stat .value { font-family: var(--font-mono); font-size: var(--step-2); font-variant-numeric: tabular-nums; line-height: 1.2; }
-.stat .sub { font-size: var(--step--1); color: var(--muted); }
-.meter { height: 6px; border-radius: 3px; background: var(--surface-2); overflow: hidden; }
-.meter i { display: block; height: 100%; background: var(--accent); border-radius: 3px; }
-.player { display: flex; align-items: center; gap: 12px; }
+
+body { color: var(--color-ink-2); }
+h1, h2, h3 { color: var(--color-ink); }
+.container { padding-left: max(var(--gutter), env(safe-area-inset-left, 0px)); padding-right: max(var(--gutter), env(safe-area-inset-right, 0px)); }
+a { color: var(--color-ink); text-decoration-color: var(--color-accent); text-underline-offset: 0.15em; }
+a:hover { text-decoration-thickness: 2px; }
+.num, output { font-family: var(--font-outlier); font-variant-numeric: tabular-nums; }
+.caption { font-size: var(--text-sm); line-height: 1.45; color: var(--color-muted); max-width: 62ch; }
+
+/* Controls */
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: var(--space-xs); min-height: 48px; padding: 0 var(--space-lg); border: var(--rule-hair) solid var(--color-ink); border-radius: var(--radius-pill); background: transparent; color: var(--color-ink); font: 500 var(--text-md)/1 var(--font-display); white-space: nowrap; cursor: pointer; transition: background-color var(--dur-short) var(--ease-out), transform var(--dur-micro) var(--ease-out); }
+.btn:hover { background: var(--color-paper-2); }
+.btn:active { transform: translateY(1px); }
+.btn:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+.btn:disabled { opacity: 0.55; cursor: not-allowed; transform: none; }
+.btn--primary { background: var(--color-accent); border-color: var(--color-accent); color: var(--color-accent-ink); min-width: 7.5rem; }
+.btn--primary:hover { background: var(--color-accent-2); border-color: var(--color-accent-2); }
+.chips { display: flex; flex-wrap: wrap; gap: var(--space-xs); }
+.chip { min-height: 44px; padding: 0 var(--space-md); border: var(--rule-hair) solid var(--color-rule-2); border-radius: var(--radius-pill); background: transparent; color: var(--color-ink); font: 500 var(--text-sm)/1 var(--font-display); white-space: nowrap; cursor: pointer; transition: background-color var(--dur-short) var(--ease-out), transform var(--dur-micro) var(--ease-out); }
+.chip:hover { background: var(--color-paper-2); }
+.chip:active { transform: translateY(1px); }
+.chip:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+.chip[aria-pressed="true"] { background: var(--color-ink); border-color: var(--color-ink); color: var(--color-sheet); }
+input[type=range] { accent-color: var(--color-ink); width: 100%; min-height: 44px; margin: 0; cursor: pointer; }
+input[type=range]:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+input[type=range]:active { cursor: grabbing; }
+input[type=range]:disabled { opacity: 0.55; cursor: not-allowed; }
+fieldset { margin: 0; padding: 0; border: 0; min-width: 0; }
+legend, .label { padding: 0; font: 500 var(--text-sm)/1.3 var(--font-body); color: var(--color-muted); }
+
+/* Chrome: the disclaimer as an ink banner over a plain bar */
+.banner { background: var(--color-ink); color: var(--color-sheet); font-size: var(--text-sm); }
+.banner .container { min-height: 36px; display: flex; align-items: center; }
+.bar { border-bottom: var(--rule-bar) solid var(--color-ink); }
+.bar .container { min-height: 68px; display: flex; align-items: center; justify-content: space-between; gap: var(--space-lg); }
+.brand { display: flex; align-items: baseline; gap: var(--space-sm); min-width: 0; }
+.wordmark { font: 600 var(--text-lg)/1 var(--font-display); letter-spacing: var(--tracking-display); color: var(--color-ink); text-decoration: none; }
+.wordmark:focus-visible, .bar nav a:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+.tagline { font-size: var(--text-sm); color: var(--color-muted); white-space: nowrap; }
+.nav-links { display: flex; gap: var(--space-lg); margin: 0; padding: 0; list-style: none; }
+.menu { display: none; position: relative; }
+.menu summary { display: inline-flex; align-items: center; min-height: 44px; padding: 0 var(--space-md); border: var(--rule-hair) solid var(--color-ink); border-radius: var(--radius-pill); font: 500 var(--text-sm)/1 var(--font-display); color: var(--color-ink); cursor: pointer; list-style: none; }
+.menu summary::-webkit-details-marker { display: none; }
+.menu summary:hover { background: var(--color-paper-2); }
+.menu summary:active { transform: translateY(1px); }
+.menu summary:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+.menu ul { margin: 0; list-style: none; position: absolute; right: 0; top: calc(100% + var(--space-xs)); z-index: var(--z-dropdown); display: grid; gap: 0; min-width: 14rem; padding: var(--space-xs) 0; background: var(--color-sheet); border-top: var(--rule-bar) solid var(--color-ink); }
+.menu li a { display: block; padding: var(--space-sm) var(--space-md); }
+.bar nav a { font-size: var(--text-md); color: var(--color-ink); text-decoration: none; white-space: nowrap; }
+.bar nav a:hover { text-decoration: underline; text-decoration-color: var(--color-accent); }
+
+/* Hero: the question and its control on the left, the plate on the right */
+.hero { min-height: calc(100dvh - var(--chrome-h)); display: grid; align-items: center; padding-block: var(--space-lg); }
+.hero__grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--space-2xl); align-items: center; }
+.hero__text { display: grid; gap: var(--space-lg); }
+.hero h1 { font-size: clamp(2.5rem, 3.4vw + 0.75rem, 4.5rem); letter-spacing: -0.035em; line-height: 0.95; max-width: 20ch; }
+.hero .lead { color: var(--color-ink-2); max-width: 34ch; }
+.player { display: flex; align-items: center; gap: var(--space-md); margin-top: var(--space-xs); }
 .player input[type=range] { flex: 1; min-width: 0; }
-button, .chip { font: inherit; cursor: pointer; }
-.btn { background: var(--accent); color: var(--accent-ink); border: 0; border-radius: 8px; padding: 9px 16px; font-weight: 600; font-size: var(--step--1); }
-.btn.ghost { background: transparent; color: var(--accent); border: 1px solid var(--accent); }
-.btn:disabled { opacity: 0.55; cursor: progress; }
-.chips { display: flex; flex-wrap: wrap; gap: 8px; }
-.chip { border: 1px solid var(--rule); background: var(--surface); color: var(--ink); padding: 6px 12px; border-radius: 999px; font-size: var(--step--1); }
-.chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
-.chip small { opacity: 0.75; }
-:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-.callout { border-left: 3px solid var(--accent); padding: 4px 0 4px 14px; color: var(--ink-2); max-width: 70ch; }
-.callout strong { color: var(--ink); }
-.big-claim { font-family: var(--font-display); font-size: clamp(1.3rem, 2.6vw, 1.75rem); line-height: 1.25; max-width: 32ch; }
-.big-claim .num { color: var(--denerv); font-family: var(--font-display); font-weight: 700; }
-.two { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px; }
-@media (max-width: 860px) { .two { grid-template-columns: 1fr; } }
-.panel { background: var(--surface); border: 1px solid var(--rule); border-radius: var(--radius); padding: 16px; min-width: 0; display: grid; gap: 10px; align-content: start; }
-.panel h3 { font-size: var(--step-0); font-family: var(--font-body); font-weight: 600; }
+.month { font-size: var(--text-sm); color: var(--color-ink); min-width: 4.5rem; text-align: right; }
+.patients { display: grid; gap: var(--space-xs); }
+
+.sheet { margin: 0; background: var(--color-sheet); border-top: var(--rule-bar) solid var(--color-ink); padding: var(--space-sm) var(--space-lg) var(--space-md); display: grid; gap: var(--space-sm); min-width: 0; }
+.sheet__head { padding-bottom: var(--space-xs); border-bottom: var(--rule-hair) solid var(--color-rule); }
+.sheet__title { font: 600 var(--text-md)/1.3 var(--font-display); letter-spacing: -0.01em; color: var(--color-ink); }
+.sheet__head { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-2xs) var(--space-sm); }
+.fig { flex: none; font: 500 var(--text-sm)/1.3 var(--font-body); color: var(--color-muted); }
+.phase { font-size: var(--text-sm); color: var(--color-muted); }
+.phase.symptomatic { color: var(--color-ink); font-weight: 500; }
+.plate { display: grid; place-items: center; }
+.plate canvas { display: block; width: min(100%, max(15rem, calc(100dvh - 27.5rem))); aspect-ratio: 1 / 1; border-radius: 50%; }
+.readouts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-md); margin: 0; border-top: var(--rule-bar) solid var(--color-rule-2); padding-top: var(--space-xs); }
+.readouts > div { display: grid; gap: var(--space-3xs); min-width: 0; }
+.readouts dt { font-size: var(--text-xs); line-height: 1.2; color: var(--color-muted); }
+.readouts dd { margin: 0; display: grid; gap: var(--space-2xs); }
+.readouts .value { font: 500 var(--text-lg)/1.1 var(--font-outlier); font-variant-numeric: tabular-nums; color: var(--color-ink); }
+.readouts .unit { font-size: var(--text-xs); line-height: 1.2; color: var(--color-muted); }
+/* The bars repeat the figures beside them; the printed plate keeps the figures only. */
+.meter { display: none; }
+.legend-note { font-size: var(--text-sm); font-style: italic; line-height: 1.4; color: var(--color-ink-2); }
+.key { display: flex; flex-wrap: wrap; gap: var(--space-2xs) var(--space-md); margin: 0; padding: 0; list-style: none; font-size: var(--text-xs); color: var(--color-ink-2); }
+.key li { display: inline-flex; align-items: center; gap: var(--space-xs); }
+.sw { width: 12px; height: 12px; display: inline-block; flex-shrink: 0; outline: var(--rule-hair) solid var(--color-rule); outline-offset: -1px; }
+.sw--s { background: var(--fibre-s); } .sw--fr { background: var(--fibre-fr); } .sw--ff { background: var(--fibre-ff); } .sw--denerv { background: var(--denerv); } .sw--lost { background: var(--fibre-lost); }
+.sw.line { height: 3px; width: 18px; outline: 0; }
+
+
+/* Sections: a question, its answer, then the figure that shows it */
+.onset { padding-block: var(--section-gap-s); border-top: var(--rule-bar) solid var(--color-ink); }
+.onset__grid { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: var(--space-2xl); align-items: start; }
+.onset__answer { display: grid; gap: var(--space-lg); }
+.statement { font: 500 var(--text-2xl)/1.25 var(--font-body); color: var(--color-ink); max-width: 30ch; text-wrap: balance; }
+.statement .num { color: var(--color-accent); }
+.note { max-width: 62ch; color: var(--color-ink-2); }
+.note strong, .answer strong { color: var(--color-ink); font-weight: 500; }
+.onset .patients { padding-top: var(--space-xl); }
+.section { padding-block: var(--section-gap-s); }
+.section--gap { padding-block: var(--section-gap); }
+.section--gap-l { padding-block: var(--section-gap-l); }
+.section > .container { display: grid; gap: var(--space-2xl); }
+.qa { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: var(--space-2xl); align-items: end; }
+.qa__answer { display: grid; gap: var(--space-lg); }
+.answer { max-width: 62ch; font-size: var(--text-lead); line-height: 1.5; color: var(--color-ink-2); }
+.qa__controls { display: grid; gap: var(--space-md); }
+.control { display: grid; gap: var(--space-2xs); min-width: 0; }
+.control label { display: flex; justify-content: space-between; gap: var(--space-xs); font-size: var(--text-sm); color: var(--color-muted); }
+.control output { font: 500 var(--text-sm)/1.3 var(--font-body); font-variant-numeric: tabular-nums; color: var(--color-ink); text-align: right; }
+select { min-height: 44px; padding: 0 var(--space-sm); border: var(--rule-hair) solid var(--color-muted); border-radius: var(--radius-pill); background: var(--color-sheet); color: var(--color-ink); font: 400 var(--text-md)/1 var(--font-body); cursor: pointer; }
+select:hover { border-color: var(--color-ink); }
+select:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+select:active { border-color: var(--color-ink); }
+select:disabled { opacity: 0.55; cursor: not-allowed; }
+.sheet--wide { padding: var(--space-md) var(--space-lg) var(--space-lg); }
+.sheet .legend, .legend { display: flex; flex-wrap: wrap; gap: var(--space-2xs) var(--space-md); font-size: var(--text-sm); color: var(--color-ink-2); }
+.legend span { display: inline-flex; align-items: center; gap: var(--space-xs); }
 .chart { position: relative; width: 100%; min-width: 0; }
 .chart svg { display: block; width: 100%; overflow: visible; }
-.chart text { font-family: var(--font-mono); font-size: 11px; fill: var(--muted); }
-.tip { position: absolute; pointer-events: none; background: var(--surface); border: 1px solid var(--rule); border-radius: 8px; padding: 8px 10px; font-size: 12px; box-shadow: 0 6px 18px rgba(0,0,0,0.12); min-width: 150px; z-index: 5; }
-.tip .t { font-family: var(--font-mono); color: var(--muted); margin-bottom: 4px; }
-.tip .row { display: flex; justify-content: space-between; gap: 12px; align-items: center; }
-.tip .row span:first-child { display: inline-flex; align-items: center; gap: 6px; color: var(--ink-2); }
-.tip .row b { font-family: var(--font-mono); font-weight: 500; color: var(--ink); }
-.controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px 22px; }
-.control { display: grid; gap: 4px; min-width: 0; }
-.control label { font-size: var(--step--1); color: var(--ink-2); display: flex; justify-content: space-between; gap: 8px; }
-.control label output { font-family: var(--font-mono); color: var(--ink); }
-input[type=range] { accent-color: var(--accent); width: 100%; }
-select { font: inherit; font-size: var(--step--1); padding: 6px 8px; border-radius: 8px; border: 1px solid var(--rule); background: var(--surface); color: var(--ink); }
-.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; }
-.tile { background: var(--surface); border: 1px solid var(--rule); border-radius: var(--radius); padding: 12px 14px; display: grid; gap: 2px; }
-.tile .label { font-size: var(--step--1); color: var(--ink-2); }
-.tile .value { font-family: var(--font-mono); font-size: var(--step-2); font-variant-numeric: tabular-nums; }
-.tile .sub { font-size: var(--step--1); color: var(--muted); }
-.stack { display: grid; gap: 18px; }
-.bars { display: grid; gap: 10px; }
-.bar-row { display: grid; grid-template-columns: minmax(120px, 190px) minmax(0, 1fr) 56px; gap: 10px; align-items: center; font-size: var(--step--1); }
-.bar-row .track { height: 18px; background: var(--surface-2); border-radius: 4px; position: relative; overflow: hidden; }
-.bar-row .fill { position: absolute; inset: 0 auto 0 0; border-radius: 0 4px 4px 0; transition: width 0.4s ease; }
-.bar-row .target { position: absolute; top: -2px; bottom: -2px; width: 1px; background: var(--ink-2); left: 80%; }
-.bar-row .pct { font-family: var(--font-mono); text-align: right; }
-.progress { height: 4px; background: var(--surface-2); border-radius: 2px; overflow: hidden; }
-.progress i { display: block; height: 100%; width: 0; background: var(--accent); transition: width 0.2s; }
-.mechanisms { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 12px; }
-.mech { padding: 12px 14px; border: 1px solid var(--rule); border-radius: var(--radius); background: var(--surface); display: grid; gap: 4px; font-size: var(--step--1); color: var(--ink-2); }
-.mech b { color: var(--ink); font-size: var(--step-0); }
-footer { padding-block: 40px 60px; border-top: 1px solid var(--rule); color: var(--ink-2); font-size: var(--step--1); }
-footer .wrap { display: grid; gap: 10px; }
-.code { font-family: var(--font-mono); font-size: var(--step--1); background: var(--surface); border: 1px solid var(--rule); border-radius: 8px; padding: 10px 12px; overflow-x: auto; white-space: pre; color: var(--ink); }
-@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+.chart text { font-family: var(--font-body); font-size: 12px; fill: var(--color-muted); }
+.chart text.halo { paint-order: stroke; stroke: var(--color-sheet); stroke-width: 4px; stroke-linejoin: round; }
+.tip { position: absolute; pointer-events: none; z-index: var(--z-tooltip); min-width: 10rem; padding: var(--space-xs) var(--space-sm); background: var(--color-sheet); border: var(--rule-hair) solid var(--color-rule-2); font-size: var(--text-sm); }
+.tip .t { color: var(--color-muted); margin-bottom: var(--space-2xs); }
+.tip .row { display: flex; justify-content: space-between; align-items: center; gap: var(--space-sm); }
+.tip .row span:first-child { display: inline-flex; align-items: center; gap: var(--space-xs); color: var(--color-ink-2); }
+.tip .row b { font: 500 var(--text-sm)/1.3 var(--font-outlier); font-variant-numeric: tabular-nums; color: var(--color-ink); }
+.pair { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: var(--space-2xl); align-items: center; }
+.pair--figures { align-items: start; }
+.pair__note { font-size: var(--text-lead); line-height: 1.5; }
+.tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-top: var(--rule-bar) solid var(--color-rule-2); }
+.tile { display: grid; gap: var(--space-2xs); align-content: start; padding: var(--space-md) var(--space-lg) 0; border-left: var(--rule-hair) solid var(--color-rule-2); min-width: 0; }
+.tile:first-child { padding-left: 0; border-left: 0; }
+.tile .label { font-size: var(--text-sm); color: var(--color-muted); }
+.tile .value { font: 500 var(--text-3xl)/1.05 var(--font-outlier); font-variant-numeric: tabular-nums; letter-spacing: -0.03em; color: var(--color-ink); }
+.tile .sub { font-size: var(--text-sm); color: var(--color-muted); }
+.trial { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: var(--space-2xl); align-items: start; }
+.trial__form, .trial__results { display: grid; gap: var(--space-lg); min-width: 0; }
+.design { display: grid; gap: var(--space-md); padding-top: var(--space-lg); border-top: var(--rule-bar) solid var(--color-rule-2); }
+.design legend { float: left; width: 100%; margin-bottom: var(--space-xs); color: var(--color-ink); font-weight: 500; }
+.run { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-md); }
+.progress { height: 2px; background: var(--color-rule); }
+.progress i { display: block; height: 100%; width: 0; background: var(--color-ink); }
+.bars { display: grid; }
+.bar-row { display: grid; grid-template-columns: minmax(8rem, 12rem) minmax(0, 1fr) 3.5rem; gap: var(--space-sm); align-items: center; padding-block: var(--space-xs); border-top: var(--rule-hair) solid var(--color-rule); font-size: var(--text-sm); color: var(--color-ink-2); }
+.bar-row:first-child { border-top: 0; }
+.bar-row .track { position: relative; height: 12px; background: var(--color-paper-2); }
+.bar-row .fill { position: absolute; inset: 0 auto 0 0; }
+.bar-row .target { position: absolute; top: -4px; bottom: -4px; left: 80%; width: 1px; background: var(--color-ink); }
+.bar-row .pct { font-family: var(--font-outlier); font-variant-numeric: tabular-nums; text-align: right; color: var(--color-ink); }
+.band--ink { background: var(--color-ink); color: var(--color-rule); }
+.band--ink h2, .band--ink strong { color: var(--color-sheet); }
+.band--ink .answer, .band--ink .limits { color: var(--color-rule); }
+.table-wrap { overflow-x: auto; }
+.mechanisms { width: 100%; border-collapse: collapse; font-size: var(--text-md); }
+.mechanisms thead th { padding: 0 var(--space-md) var(--space-xs) 0; border-bottom: var(--rule-bar) solid var(--color-rule); font: 500 var(--text-sm)/1.3 var(--font-body); color: var(--color-paper-3); text-align: left; white-space: nowrap; }
+.mechanisms tbody th, .mechanisms td { padding: var(--space-md) var(--space-md) var(--space-md) 0; border-top: var(--rule-hair) solid var(--color-rule-2); text-align: left; vertical-align: top; }
+.mechanisms tbody th { width: 26%; font: 600 var(--text-md)/1.3 var(--font-display); color: var(--color-sheet); }
+.mechanisms td { color: var(--color-rule); }
+.mechanisms td:last-child { width: 20%; color: var(--color-paper-3); font-size: var(--text-sm); }
+.model__foot { display: grid; gap: var(--space-xl); }
+.limits { max-width: 62ch; }
+.code { margin: 0; padding: var(--space-md) 0 0; border-top: var(--rule-bar) solid var(--color-rule); white-space: pre-wrap; overflow-wrap: anywhere; font: 400 var(--text-sm)/1.7 var(--font-outlier); color: var(--color-sheet); }
+.code code { font: inherit; }
+.colophon { padding-block: var(--space-3xl); border-top: var(--rule-bar) solid var(--color-ink); }
+.colophon .container { display: grid; gap: var(--space-sm); max-width: var(--container); }
+.colophon p { max-width: 70ch; font-size: var(--text-sm); color: var(--color-ink-2); }
+.colophon .wordmark { font-size: var(--text-lg); margin-bottom: var(--space-xs); }
+
+@media (max-width: 60rem) {
+  .onset__grid, .qa, .pair, .trial, .model__foot { grid-template-columns: minmax(0, 1fr); }
+  .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); row-gap: var(--space-lg); }
+  .tile:nth-child(3) { padding-left: 0; border-left: 0; }
+  .bar-row { grid-template-columns: minmax(0, 1fr) 3.5rem; }
+  .bar-row .track { grid-column: 1 / -1; grid-row: 2; }
+  .mechanisms thead { display: none; }
+  .mechanisms tr { display: grid; padding-block: var(--space-md); border-top: var(--rule-hair) solid var(--color-rule-2); }
+  .mechanisms tbody th, .mechanisms td { width: auto !important; padding: 0 0 var(--space-2xs); border: 0; }
+  .nav-links { display: none !important; }
+  .menu { display: block; }
+  .hero { min-height: 0; }
+  .hero__grid { grid-template-columns: minmax(0, 1fr); gap: var(--space-xl); }
+  .plate canvas { width: min(100%, 30rem); }
+  .readouts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 40rem) {
+  .tile .value { font-size: var(--text-xl); }
+  .tile { padding-inline: var(--space-sm) 0; } .tagline { display: none; } }
+.skip { position: absolute; left: var(--space-md); top: calc(-1 * var(--space-3xl)); z-index: var(--z-toast); padding: var(--space-xs) var(--space-md); background: var(--color-ink); color: var(--color-sheet); }
+.skip:focus-visible { top: var(--space-md); }
 </style>
 
-<header class="top">
-  <div class="wrap">
-    <div class="brand"><b>mndsim</b> · motor unit degeneration simulator</div>
-    <div class="notice">For learning and research. Not a prediction for any real person.</div>
+<a class="skip" href="#main">Skip to content</a>
+<header>
+  <div class="banner"><div class="container"><p>For learning and research. Not a prediction for any real person.</p></div></div>
+  <div class="bar">
+    <div class="container">
+      <div class="brand"><a class="wordmark" href="#main" aria-label="mndsim, back to the top">mndsim</a><span class="tagline">motor unit degeneration simulator</span></div>
+      <nav aria-label="Sections">
+        <ul class="nav-links">
+          <li><a href="#hidden">Hidden phase</a></li>
+          <li><a href="#treat">Treatment</a></li>
+          <li><a href="#trial">Trials</a></li>
+          <li><a href="#model">The model</a></li>
+          <li><a href="https://github.com/ProudStone-576/motor-unit-degeneration-simulator" target="_blank" rel="noopener">Source code</a></li>
+        </ul>
+        <details class="menu">
+          <summary>Sections</summary>
+          <ul>
+            <li><a href="#hidden">Hidden phase</a></li>
+            <li><a href="#treat">Treatment</a></li>
+            <li><a href="#trial">Trials</a></li>
+            <li><a href="#model">The model</a></li>
+            <li><a href="https://github.com/ProudStone-576/motor-unit-degeneration-simulator" target="_blank" rel="noopener">Source code</a></li>
+          </ul>
+        </details>
+      </nav>
+    </div>
   </div>
 </header>
 
-<main>
-  <section class="hero">
-    <div class="wrap">
-      <div class="intro">
-        <div class="eyebrow">Amyotrophic lateral sclerosis · motor neuron disease</div>
-        <h1>Inside ALS</h1>
-        <p class="lede">About half of a muscle's motor neurons can die before anyone notices weakness. Watch it happen in a simulated muscle biopsy, then try to stop it.</p>
-        <div class="chips" id="phenotypes" role="group" aria-label="Choose a virtual patient"></div>
-        <p class="slide-caption" id="phenotype-info"></p>
+<main id="main">
+  <section class="hero" aria-labelledby="hero-title">
+    <div class="container hero__grid">
+      <div class="hero__text">
+        <h1 id="hero-title">Half the neurons die before weakness shows.</h1>
+        <p class="lead">Watch it happen in a simulated biopsy, then try to stop it.</p>
+        <div class="player">
+          <button class="btn btn--primary" id="play" type="button" aria-label="Play">Play</button>
+          <input type="range" id="scrub" min="0" max="96" step="1" value="0" aria-label="Month of disease">
+          <span class="month num" id="month-label">0 mo</span>
+        </div>
+        <p class="phase" id="phase" role="status"><span id="phase-text">Hidden phase</span></p>
       </div>
-      <div class="hero-grid">
-        <figure class="slide" style="margin:0">
-          <canvas id="biopsy" width="720" height="720" role="img" aria-label="Simulated muscle cross-section"></canvas>
-          <div class="player">
-            <button class="btn" id="play" type="button" aria-label="Play">Play</button>
-            <input type="range" id="scrub" min="0" max="96" step="1" value="0" aria-label="Month">
-            <span class="num" id="month-label">0 mo</span>
-          </div>
-          <div class="legend" aria-label="Fibre colours">
-            <span><i class="sw" style="background:var(--fibre-s)"></i>Slow fibres</span>
-            <span><i class="sw" style="background:var(--fibre-fr)"></i>Fast, fatigue-resistant</span>
-            <span><i class="sw" style="background:var(--fibre-ff)"></i>Fast, fatigable</span>
-            <span><i class="sw" style="background:var(--denerv)"></i>Denervated</span>
-            <span><i class="sw" style="background:var(--fibre-lost)"></i>Lost</span>
-          </div>
-          <figcaption class="slide-caption">Each polygon is one muscle fibre, coloured by the type of motor neuron that drives it, as on an ATPase-stained biopsy. When a neuron dies its fibres shrink (magenta). Surviving neighbours adopt them, so fibres of one type start to cluster: the "fibre-type grouping" pathologists see in ALS.</figcaption>
-        </figure>
-        <div class="readout">
-          <div class="phase" id="phase"><span class="dot"></span><span id="phase-text">Hidden phase</span></div>
-          <div class="stats">
-            <div class="stat"><span class="label">Motor neurons alive</span><span class="value" id="st-mu">120</span><div class="meter"><i id="mt-mu" style="width:100%"></i></div><span class="sub">in this muscle (of 120)</span></div>
-            <div class="stat"><span class="label">Muscle strength</span><span class="value" id="st-mvc">100%</span><div class="meter"><i id="mt-mvc" style="width:100%"></i></div><span class="sub">of healthy</span></div>
-            <div class="stat"><span class="label">Daily-function score</span><span class="value" id="st-fn">48</span><div class="meter"><i id="mt-fn" style="width:100%"></i></div><span class="sub">ALSFRS-R-like, 0 to 48</span></div>
-            <div class="stat"><span class="label">Blood neurofilament</span><span class="value" id="st-nfl">1.0×</span><div class="meter"><i id="mt-nfl" style="width:10%"></i></div><span class="sub">NfL, vs healthy for age</span></div>
-          </div>
-          <p class="big-claim" id="claim"></p>
-          <p class="callout" id="hero-note"></p>
+      <figure class="sheet">
+        <div class="sheet__head">
+          <div class="sheet__head"><span class="fig">Figure 1</span><p class="sheet__title">Muscle cross-section</p></div>
+        </div>
+        <div class="plate"><canvas id="biopsy" width="720" height="720" role="img" aria-label="Simulated muscle cross-section"></canvas></div>
+        <dl class="readouts">
+          <div><dt>Motor neurons alive</dt><dd><span class="value" id="st-mu">120</span><span class="unit">in this muscle (of 120)</span><span class="meter"><i id="mt-mu" style="width:100%"></i></span></dd></div>
+          <div><dt>Muscle strength</dt><dd><span class="value" id="st-mvc">100%</span><span class="unit">of healthy</span><span class="meter"><i id="mt-mvc" style="width:100%"></i></span></dd></div>
+          <div><dt>Daily-function score</dt><dd><span class="value" id="st-fn">48</span><span class="unit">ALSFRS-R-like, 0 to 48</span><span class="meter"><i id="mt-fn" style="width:100%"></i></span></dd></div>
+          <div><dt>Blood neurofilament</dt><dd><span class="value" id="st-nfl">1.0×</span><span class="unit">NfL, vs healthy for age</span><span class="meter"><i id="mt-nfl" style="width:10%"></i></span></dd></div>
+        </dl>
+        <ul class="key" aria-label="Fibre colours">
+          <li><i class="sw sw--s"></i>Slow fibres</li>
+          <li><i class="sw sw--fr"></i>Fast, fatigue-resistant</li>
+          <li><i class="sw sw--ff"></i>Fast, fatigable</li>
+          <li><i class="sw sw--denerv"></i>Denervated</li>
+          <li><i class="sw sw--lost"></i>Lost</li>
+        </ul>
+        <figcaption class="legend-note">Amyotrophic lateral sclerosis (motor neuron disease), simulated. Each polygon is one muscle fibre, coloured by the type of motor neuron that drives it, as on an ATPase-stained biopsy.</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section class="onset" aria-labelledby="onset-title">
+    <div class="container onset__grid">
+      <div class="onset__answer">
+        <h2 id="onset-title">How much is gone by the first symptom?</h2>
+        <p class="statement" id="claim"></p>
+        <p class="note" id="hero-note"></p>
+        <p class="note">When a neuron dies its fibres shrink (magenta). Surviving neighbours adopt them, so fibres of one type start to cluster: the “fibre-type grouping” pathologists see in ALS.</p>
+      </div>
+      <fieldset class="patients">
+        <legend>Virtual patient</legend>
+        <div class="chips" id="phenotypes" role="group" aria-label="Choose a virtual patient"></div>
+        <p class="caption" id="phenotype-info"></p>
+      </fieldset>
+    </div>
+  </section>
+
+  <section id="hidden" class="section section--gap" aria-labelledby="hidden-title">
+    <div class="container">
+      <div class="qa">
+        <div class="qa__answer">
+          <h2 id="hidden-title">What happens in the hidden phase?</h2>
+          <p class="answer"><strong>Compensation hides the damage, and a blood test can see it.</strong> Surviving neurons grow to cover for lost ones, so strength holds until compensation runs out. Neurofilament light (NfL), a protein released by dying axons, tracks the <em>rate</em> of loss instead, so it rises long before symptoms.</p>
+        </div>
+        <div class="qa__controls">
+          <div class="control"><label for="k-lmn">How fast neurons die <output id="o-lmn">1.0×</output></label><input id="k-lmn" type="range" min="-1" max="1" step="0.05" value="0"></div>
+          <div class="control"><label for="k-spread">How fast it spreads <output id="o-spread">1.0×</output></label><input id="k-spread" type="range" min="-1" max="1" step="0.05" value="0"></div>
+          <div class="control"><label for="k-comp">How much survivors can grow <output id="o-comp">5.0×</output></label><input id="k-comp" type="range" min="1" max="10" step="0.25" value="5"></div>
         </div>
       </div>
+      <figure class="sheet sheet--wide">
+        <div class="sheet__head"><span class="fig">Figure 2</span><h3 class="sheet__title">Neurons, strength and daily function</h3></div>
+        <div class="legend" id="lg-a"></div>
+        <div class="chart" id="chart-a"></div>
+      </figure>
+      <div class="pair">
+        <figure class="sheet">
+          <div class="sheet__head"><span class="fig">Figure 3</span><h3 class="sheet__title">Blood NfL (times healthy)</h3></div>
+          <div class="legend" id="lg-b"></div>
+          <div class="chart" id="chart-b"></div>
+        </figure>
+        <p class="note pair__note" id="hidden-note"></p>
+      </div>
     </div>
   </section>
 
-  <section id="hidden">
-    <div class="wrap stack">
-      <div class="intro">
-        <div class="eyebrow">The hidden phase</div>
-        <h2>Compensation hides the damage, and a blood test can see it</h2>
-        <p class="lede">Surviving neurons grow to cover for lost ones, so strength holds until compensation runs out. Neurofilament light (NfL), a protein released by dying axons, tracks the <em>rate</em> of loss instead, so it rises long before symptoms.</p>
+  <section id="treat" class="section section--gap-l" aria-labelledby="treat-title">
+    <div class="container">
+      <div class="qa">
+        <div class="qa__answer">
+          <h2 id="treat-title">What if we treat?</h2>
+          <p class="answer"><strong>Same patient, same drug, different timing.</strong> Pick how a treatment works and when it starts. Drugs that slow degeneration lower NfL within weeks, but function separates only months later. A drug that only boosts strength moves function at once and never touches NfL.</p>
+        </div>
+        <div class="qa__controls">
+          <fieldset class="patients">
+            <legend>How the treatment works</legend>
+            <div class="chips" id="mechanisms" role="group" aria-label="Choose a treatment mechanism"></div>
+          </fieldset>
+          <div class="control"><label for="k-start">Treatment starts <output id="o-start">at diagnosis</output></label><input id="k-start" type="range" min="-12" max="36" step="1" value="12"></div>
+        </div>
       </div>
-      <div class="controls">
-        <div class="control"><label for="k-lmn">How fast neurons die <output id="o-lmn">1.0×</output></label><input id="k-lmn" type="range" min="-1" max="1" step="0.05" value="0"></div>
-        <div class="control"><label for="k-spread">How fast it spreads <output id="o-spread">1.0×</output></label><input id="k-spread" type="range" min="-1" max="1" step="0.05" value="0"></div>
-        <div class="control"><label for="k-comp">How much survivors can grow <output id="o-comp">5.0×</output></label><input id="k-comp" type="range" min="1" max="10" step="0.25" value="5"></div>
-      </div>
-      <div class="two">
-        <div class="panel"><h3>Neurons, strength and daily function</h3><div class="legend" id="lg-a"></div><div class="chart" id="chart-a"></div></div>
-        <div class="panel"><h3>Blood NfL (times healthy)</h3><div class="legend" id="lg-b"></div><div class="chart" id="chart-b"></div></div>
-      </div>
-      <p class="callout" id="hidden-note"></p>
-    </div>
-  </section>
-
-  <section id="treat">
-    <div class="wrap stack">
-      <div class="intro">
-        <div class="eyebrow">What if we treat?</div>
-        <h2>Same patient, same drug, different timing</h2>
-        <p class="lede">Pick how a treatment works and when it starts. Drugs that slow degeneration lower NfL within weeks, but function separates only months later. A drug that only boosts strength moves function at once and never touches NfL.</p>
-      </div>
-      <div class="chips" id="mechanisms" role="group" aria-label="Choose a treatment mechanism"></div>
-      <div class="control" style="max-width:560px"><label for="k-start">Treatment starts <output id="o-start">at diagnosis</output></label><input id="k-start" type="range" min="-12" max="36" step="1" value="12"></div>
       <div class="tiles" id="tx-tiles"></div>
-      <div class="two">
-        <div class="panel"><h3>Daily-function score</h3><div class="legend" id="lg-c"></div><div class="chart" id="chart-c"></div></div>
-        <div class="panel"><h3>Blood NfL (times healthy)</h3><div class="legend" id="lg-d"></div><div class="chart" id="chart-d"></div></div>
+      <div class="pair pair--figures">
+        <figure class="sheet">
+          <div class="sheet__head"><span class="fig">Figure 4</span><h3 class="sheet__title">Daily-function score</h3></div>
+          <div class="legend" id="lg-c"></div>
+          <div class="chart" id="chart-c"></div>
+        </figure>
+        <figure class="sheet">
+          <div class="sheet__head"><span class="fig">Figure 5</span><h3 class="sheet__title">Blood NfL (times healthy)</h3></div>
+          <div class="legend" id="lg-d"></div>
+          <div class="chart" id="chart-d"></div>
+        </figure>
       </div>
-      <p class="callout" id="tx-note"></p>
+      <p class="note" id="tx-note"></p>
     </div>
   </section>
 
-  <section id="trial">
-    <div class="wrap stack">
-      <div class="intro">
-        <div class="eyebrow">Design a virtual trial</div>
-        <h2>Would a real trial notice?</h2>
-        <p class="lede">Hundreds of virtual patients are screened like a real trial, and each eligible one is simulated with and without the drug. Thousands of randomised trials are then replayed, with dropouts and measurement noise, to estimate how often each endpoint would show the effect.</p>
+  <section id="trial" class="section section--gap" aria-labelledby="trial-title">
+    <div class="container trial">
+      <div class="trial__form">
+        <h2 id="trial-title">Would a real trial notice?</h2>
+        <p class="answer">Hundreds of virtual patients are screened like a real trial, and each eligible one is simulated with and without the drug. Thousands of randomised trials are then replayed, with dropouts and measurement noise, to estimate how often each endpoint would show the effect.</p>
+        <fieldset class="design">
+          <legend>Design a virtual trial</legend>
+          <div class="control"><label for="t-mech">Treatment</label><select id="t-mech"></select></div>
+          <div class="control"><label for="t-n">Patients per arm <output id="o-n">100</output></label><input id="t-n" type="range" min="20" max="300" step="10" value="100"></div>
+          <div class="control"><label for="t-dur">Trial length <output id="o-dur">6 months</output></label><input id="t-dur" type="range" min="0" max="3" step="1" value="1"></div>
+          <div class="control"><label for="t-dfs">Enrol only faster progressors <output id="o-dfs">off</output></label><input id="t-dfs" type="range" min="0" max="1.2" step="0.1" value="0"></div>
+          <div class="run"><button class="btn" id="t-run" type="button">Run virtual trials</button><p class="caption" id="t-status" role="status">Running an example trial…</p></div>
+          <div class="progress" aria-hidden="true"><i id="t-progress"></i></div>
+        </fieldset>
       </div>
-      <div class="controls">
-        <div class="control"><label for="t-mech">Treatment</label><select id="t-mech"></select></div>
-        <div class="control"><label for="t-n">Patients per arm <output id="o-n">100</output></label><input id="t-n" type="range" min="20" max="300" step="10" value="100"></div>
-        <div class="control"><label for="t-dur">Trial length <output id="o-dur">6 months</output></label><input id="t-dur" type="range" min="0" max="3" step="1" value="1"></div>
-        <div class="control"><label for="t-dfs">Enrol only faster progressors <output id="o-dfs">off</output></label><input id="t-dfs" type="range" min="0" max="1.2" step="0.1" value="0"></div>
+      <div class="trial__results">
+        <figure class="sheet">
+          <div class="sheet__head"><span class="fig">Figure 6</span><h3 class="sheet__title">Chance of a significant result (power; line marks 80%)</h3></div>
+          <div class="bars" id="t-bars"></div>
+        </figure>
+        <figure class="sheet">
+          <div class="sheet__head"><span class="fig">Figure 7</span><h3 class="sheet__title">Power by trial length</h3></div>
+          <div class="legend" id="lg-e"></div>
+          <div class="chart" id="chart-e"></div>
+        </figure>
+        <p class="note" id="t-note"></p>
       </div>
-      <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap"><button class="btn" id="t-run" type="button">Run virtual trials</button><span class="slide-caption" id="t-status">Running an example trial…</span></div>
-      <div class="progress" aria-hidden="true"><i id="t-progress"></i></div>
-      <div class="two">
-        <div class="panel"><h3>Chance of a significant result <span class="slide-caption">(power; line marks 80%)</span></h3><div class="bars" id="t-bars"></div></div>
-        <div class="panel"><h3>Power by trial length</h3><div class="legend" id="lg-e"></div><div class="chart" id="chart-e"></div></div>
-      </div>
-      <p class="callout" id="t-note"></p>
     </div>
   </section>
 
-  <section id="model">
-    <div class="wrap stack">
-      <div class="intro">
-        <div class="eyebrow">How it works</div>
-        <h2>A mechanism you can read, test and change</h2>
-        <p class="lede">Everything above comes from one open model running in your browser. It mirrors the Python package line by line, and an automated test checks that both give the same numbers.</p>
+  <section id="model" class="section band--ink" aria-labelledby="model-title">
+    <div class="container">
+      <div class="qa">
+        <div class="qa__answer">
+          <h2 id="model-title">How does the model work?</h2>
+          <p class="answer"><strong>A mechanism you can read, test and change.</strong> Everything above comes from one open model running in your browser. It mirrors the Python package line by line, and an automated test checks that both give the same numbers.</p>
+        </div>
       </div>
-      <div class="mechanisms">
-        <div class="mech"><b>120 motor units per region</b>Arranged by Henneman's size principle: small slow units are recruited first, big fast ones last (Fuglevand et al. 1993).</div>
-        <div class="mech"><b>Biggest neurons fail first</b>Fast-fatigable units are the most vulnerable and sprout the least (Frey et al. 2000; Pun et al. 2006).</div>
-        <div class="mech"><b>Dying back</b>A neuron first loses its grip on the muscle, then dies (Fischer et al. 2004).</div>
-        <div class="mech"><b>Reinnervation</b>Survivors adopt orphaned fibres up to a size limit; fibres left orphaned too long are lost for good.</div>
-        <div class="mech"><b>Upper motor neurons</b>Their loss weakens the drive to muscles, and their glutamate signalling stresses lower motor neurons.</div>
-        <div class="mech"><b>Spread and blood NfL</b>Disease spreads to neighbouring regions (Ravits & La Spada 2009). Dying axons release NfL in proportion to their size and length.</div>
+      <div class="table-wrap">
+        <table class="mechanisms">
+          <thead><tr><th scope="col">Mechanism</th><th scope="col">What the model does</th><th scope="col">Source</th></tr></thead>
+          <tbody>
+            <tr><th scope="row">120 motor units per region</th><td>Arranged by Henneman’s size principle: small slow units are recruited first, big fast ones last.</td><td>Fuglevand et al. 1993</td></tr>
+            <tr><th scope="row">Biggest neurons fail first</th><td>Fast-fatigable units are the most vulnerable and sprout the least.</td><td>Frey et al. 2000; Pun et al. 2006</td></tr>
+            <tr><th scope="row">Dying back</th><td>A neuron first loses its grip on the muscle, then dies.</td><td>Fischer et al. 2004</td></tr>
+            <tr><th scope="row">Reinnervation</th><td>Survivors adopt orphaned fibres up to a size limit; fibres left orphaned too long are lost for good.</td><td></td></tr>
+            <tr><th scope="row">Upper motor neurons</th><td>Their loss weakens the drive to muscles, and their glutamate signalling stresses lower motor neurons.</td><td></td></tr>
+            <tr><th scope="row">Spread and blood NfL</th><td>Disease spreads to neighbouring regions. Dying axons release NfL in proportion to their size and length.</td><td>Ravits &amp; La Spada 2009</td></tr>
+          </tbody>
+        </table>
       </div>
-      <p class="callout"><strong>Limits.</strong> Parameters are illustrative and tuned to population averages (median survival about 2.5 to 3 years, bulbar onset worst, about half the neurons gone at symptom onset). The model has no cognition, nutrition or ventilation care, and survival is more predictable than in real life. Use it to build intuition and test ideas, never to predict someone's course.</p>
-      <div class="code">pip install "git+https://github.com/ProudStone-576/motor-unit-degeneration-simulator"
-mndsim simulate --phenotype bulbar_onset --treatment neuroprotective --plot course.png</div>
+      <div class="model__foot">
+        <p class="limits"><strong>Limits.</strong> Parameters are illustrative and tuned to population averages (median survival about 2.5 to 3 years, bulbar onset worst, about half the neurons gone at symptom onset). The model has no cognition, nutrition or ventilation care, and survival is more predictable than in real life. Use it to build intuition and test ideas, never to predict someone’s course.</p>
+        <pre class="code"><code>pip install "git+https://github.com/ProudStone-576/motor-unit-degeneration-simulator"
+mndsim simulate --phenotype bulbar_onset --treatment neuroprotective --plot course.png</code></pre>
+      </div>
     </div>
   </section>
 </main>
 
-<footer>
-  <div class="wrap">
-    <div>Open source (MIT): <a href="https://github.com/ProudStone-576/motor-unit-degeneration-simulator" target="_blank" rel="noopener">github.com/ProudStone-576/motor-unit-degeneration-simulator</a> · Python package, command-line tool, model documentation and tests.</div>
-    <div>Research and teaching tool. Nothing here is medical advice or a forecast for a real person. If you or someone you love is living with ALS, your neurology team and national ALS/MND association are the right sources of guidance.</div>
+<footer class="colophon">
+  <div class="container">
+    <p class="wordmark">mndsim</p>
+    <p>Open source (MIT): <a href="https://github.com/ProudStone-576/motor-unit-degeneration-simulator" target="_blank" rel="noopener">source code on GitHub</a>, with the Python package, command-line tool, model documentation and tests.</p>
+    <p>Research and teaching tool. Nothing here is medical advice or a forecast for a real person. If you or someone you love is living with ALS, your neurology team and national ALS/MND association are the right sources of guidance.</p>
   </div>
 </footer>
 

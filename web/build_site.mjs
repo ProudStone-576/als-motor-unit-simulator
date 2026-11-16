@@ -30,6 +30,6 @@ const head = `<!doctype html>
 mkdirSync(out, { recursive: true });
 const body = readFileSync(join(here, "index.html"), "utf8");
 writeFileSync(join(out, "index.html"), `${head}${body}\n</body>\n</html>\n`);
-for (const name of ["mndsim.js", "app.js", "trial-worker.js"]) copyFileSync(join(here, name), join(out, name));
+for (const name of ["mndsim.js", "app.js", "trial-worker.js", "tokens.css", "base.css"]) copyFileSync(join(here, name), join(out, name));
 writeFileSync(join(out, ".nojekyll"), "");
 console.log(`site written to ${out}`);
