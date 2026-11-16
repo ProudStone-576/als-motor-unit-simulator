@@ -13,7 +13,10 @@
 /* Hallmark · reworded "Inside ALS" to "Half the neurons die before weakness shows." · hero review 4 (the owner's line leads) */
 /* Hallmark · reworded "Compensation hides the damage, and a blood test can see it" to "What happens in the hidden phase?" · shape: Conversational FAQ, the old head kept word for word as the answer's first line */
 /* Hallmark · reworded "Same patient, same drug, different timing" to "What if we treat?" · shape: Conversational FAQ, the old head kept word for word as the answer's first line */
-/* Hallmark · reworded "A mechanism you can read, test and change" to "How does the model work?" · shape: Conversational FAQ, the old head kept word for word as the answer's first line */
+/* Hallmark · reworded "A mechanism you can read, test and change" to "Which six mechanisms does it run?" · shape: Conversational FAQ, the old head kept word for word as the answer's first line */
+/* Hallmark · finish-review: subagent · 8 findings · 8 resolved · gap: none */
+/* Hallmark · waive 79 · Figure 1 runs to the fold at 1440 in the sibling column, pinned beside the onset section · finish review 1 moved the plate out of the hero so a patient pick changes a picture the visitor can see */
+/* Hallmark · dropped 50% · finish review 3: the hidden-phase note repeated the onset statement's figure from a different run */
 @import url("./tokens.css");
 @import url("./base.css");
 
@@ -89,15 +92,19 @@ legend, .label { padding: 0; font: 500 var(--text-sm)/1.3 var(--font-body); colo
 .bar nav a:hover { text-decoration: underline; text-decoration-color: var(--color-accent); }
 
 /* Hero: the question and its control on the left, the plate on the right */
-.hero { min-height: calc(100dvh - var(--chrome-h)); display: grid; align-items: center; padding-block: var(--space-lg); }
-.hero__grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--space-2xl); align-items: center; }
+.spread { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: var(--space-2xl); }
+.spread > .hero { grid-column: 1; grid-row: 1; }
+.spread > .onset { grid-column: 1; grid-row: 2; }
+.spread__plate { grid-column: 2; grid-row: 1 / span 2; }
+.spread__pin { position: sticky; top: 0; min-height: calc(100dvh - var(--chrome-h)); display: grid; align-content: center; padding-block: var(--space-lg); }
+.hero { min-height: calc(100dvh - var(--chrome-h)); display: grid; align-content: center; padding-block: var(--space-lg); }
 .hero__text { display: grid; gap: var(--space-lg); }
 .hero h1 { font-size: clamp(2.5rem, 3.4vw + 0.75rem, 4.5rem); letter-spacing: -0.035em; line-height: 0.95; max-width: 20ch; }
 .hero .lead { color: var(--color-ink-2); max-width: 34ch; }
 .player { display: flex; align-items: center; gap: var(--space-md); margin-top: var(--space-xs); }
 .player input[type=range] { flex: 1; min-width: 0; }
 .month { font-size: var(--text-sm); color: var(--color-ink); min-width: 4.5rem; text-align: right; }
-.patients { display: grid; gap: var(--space-xs); }
+.patients { display: grid; gap: var(--space-xs); align-content: start; }
 
 .sheet { margin: 0; background: var(--color-sheet); border-top: var(--rule-bar) solid var(--color-ink); padding: var(--space-sm) var(--space-lg) var(--space-md); display: grid; gap: var(--space-sm); min-width: 0; }
 .sheet__head { padding-bottom: var(--space-xs); border-bottom: var(--rule-hair) solid var(--color-rule); }
@@ -107,13 +114,13 @@ legend, .label { padding: 0; font: 500 var(--text-sm)/1.3 var(--font-body); colo
 .phase { font-size: var(--text-sm); color: var(--color-muted); }
 .phase.symptomatic { color: var(--color-ink); font-weight: 500; }
 .plate { display: grid; place-items: center; }
-.plate canvas { display: block; width: min(100%, max(15rem, calc(100dvh - 27.5rem))); aspect-ratio: 1 / 1; border-radius: 50%; }
-.readouts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-md); margin: 0; border-top: var(--rule-bar) solid var(--color-rule-2); padding-top: var(--space-xs); }
-.readouts > div { display: grid; gap: var(--space-3xs); min-width: 0; }
+.plate canvas { display: block; width: min(100%, max(15rem, calc(100dvh - 29rem))); aspect-ratio: 1 / 1; border-radius: 50%; }
+.readouts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-2xs) var(--space-md); margin: 0; border-top: var(--rule-bar) solid var(--color-rule-2); padding-top: var(--space-xs); }
+.readouts > div { display: grid; grid-row: span 2; grid-template-rows: subgrid; row-gap: var(--space-2xs); align-content: start; min-width: 0; }
 .readouts dt { font-size: var(--text-xs); line-height: 1.2; color: var(--color-muted); }
-.readouts dd { margin: 0; display: grid; gap: var(--space-2xs); }
+.readouts dd { margin: 0; display: grid; gap: var(--space-2xs); align-content: start; }
 .readouts .value { font: 500 var(--text-lg)/1.1 var(--font-outlier); font-variant-numeric: tabular-nums; color: var(--color-ink); }
-.readouts .unit { font-size: var(--text-xs); line-height: 1.2; color: var(--color-muted); }
+.readouts .unit { font-size: var(--text-xs); line-height: 1.2; color: var(--color-muted); text-wrap: balance; }
 /* The bars repeat the figures beside them; the printed plate keeps the figures only. */
 .meter { display: none; }
 .legend-note { font-size: var(--text-sm); font-style: italic; line-height: 1.4; color: var(--color-ink-2); }
@@ -125,14 +132,11 @@ legend, .label { padding: 0; font: 500 var(--text-sm)/1.3 var(--font-body); colo
 
 
 /* Sections: a question, its answer, then the figure that shows it */
-.onset { padding-block: var(--section-gap-s); border-top: var(--rule-bar) solid var(--color-ink); }
-.onset__grid { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: var(--space-2xl); align-items: start; }
-.onset__answer { display: grid; gap: var(--space-lg); }
+.onset { display: grid; gap: var(--space-lg); align-content: start; padding-block: var(--space-xl) var(--section-gap-s); border-top: var(--rule-bar) solid var(--color-ink); }
 .statement { font: 500 var(--text-2xl)/1.25 var(--font-body); color: var(--color-ink); max-width: 30ch; text-wrap: balance; }
 .statement .num { color: var(--color-accent); }
 .note { max-width: 62ch; color: var(--color-ink-2); }
 .note strong, .answer strong { color: var(--color-ink); font-weight: 500; }
-.onset .patients { padding-top: var(--space-xl); }
 .section { padding-block: var(--section-gap-s); }
 .section--gap { padding-block: var(--section-gap); }
 .section--gap-l { padding-block: var(--section-gap-l); }
@@ -144,6 +148,7 @@ legend, .label { padding: 0; font: 500 var(--text-sm)/1.3 var(--font-body); colo
 .control { display: grid; gap: var(--space-2xs); min-width: 0; }
 .control label { display: flex; justify-content: space-between; gap: var(--space-xs); font-size: var(--text-sm); color: var(--color-muted); }
 .control output { font: 500 var(--text-sm)/1.3 var(--font-body); font-variant-numeric: tabular-nums; color: var(--color-ink); text-align: right; }
+.control output.num { font-family: var(--font-outlier); font-weight: 400; }
 select { min-height: 44px; padding: 0 var(--space-sm); border: var(--rule-hair) solid var(--color-muted); border-radius: var(--radius-pill); background: var(--color-sheet); color: var(--color-ink); font: 400 var(--text-md)/1 var(--font-body); cursor: pointer; }
 select:hover { border-color: var(--color-ink); }
 select:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
@@ -169,7 +174,11 @@ select:disabled { opacity: 0.55; cursor: not-allowed; }
 .tile:first-child { padding-left: 0; border-left: 0; }
 .tile .label { font-size: var(--text-sm); color: var(--color-muted); }
 .tile .value { font: 500 var(--text-3xl)/1.05 var(--font-outlier); font-variant-numeric: tabular-nums; letter-spacing: -0.03em; color: var(--color-ink); }
-.tile .sub { font-size: var(--text-sm); color: var(--color-muted); }
+.tile .sub { font-size: var(--text-sm); color: var(--color-muted); text-wrap: balance; }
+.tile .value .word { font: 500 var(--text-lg)/1 var(--font-body); letter-spacing: 0; color: var(--color-ink-2); }
+.band--well { background: var(--color-paper-2); padding-block: var(--space-3xl); }
+.section--tail { padding-bottom: var(--space-3xl); }
+.section--lead { padding-top: var(--section-gap-s); }
 .trial { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: var(--space-2xl); align-items: start; }
 .trial__form, .trial__results { display: grid; gap: var(--space-lg); min-width: 0; }
 .design { display: grid; gap: var(--space-md); padding-top: var(--space-lg); border-top: var(--rule-bar) solid var(--color-rule-2); }
@@ -204,7 +213,10 @@ select:disabled { opacity: 0.55; cursor: not-allowed; }
 .colophon .wordmark { font-size: var(--text-lg); margin-bottom: var(--space-xs); }
 
 @media (max-width: 60rem) {
-  .onset__grid, .qa, .pair, .trial, .model__foot { grid-template-columns: minmax(0, 1fr); }
+  .qa, .pair, .trial, .model__foot { grid-template-columns: minmax(0, 1fr); }
+  .spread { grid-template-columns: minmax(0, 1fr); }
+  .spread > .hero, .spread > .onset, .spread__plate { grid-column: 1; grid-row: auto; }
+  .spread__pin { position: static; min-height: 0; padding-block: 0 var(--space-xl); }
   .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); row-gap: var(--space-lg); }
   .tile:nth-child(3) { padding-left: 0; border-left: 0; }
   .bar-row { grid-template-columns: minmax(0, 1fr) 3.5rem; }
@@ -215,7 +227,6 @@ select:disabled { opacity: 0.55; cursor: not-allowed; }
   .nav-links { display: none !important; }
   .menu { display: block; }
   .hero { min-height: 0; }
-  .hero__grid { grid-template-columns: minmax(0, 1fr); gap: var(--space-xl); }
   .plate canvas { width: min(100%, 30rem); }
   .readouts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
@@ -256,11 +267,11 @@ select:disabled { opacity: 0.55; cursor: not-allowed; }
 </header>
 
 <main id="main">
-  <section class="hero" aria-labelledby="hero-title">
-    <div class="container hero__grid">
+  <div class="container spread">
+    <section class="hero" aria-labelledby="hero-title">
       <div class="hero__text">
         <h1 id="hero-title">Half the neurons die before weakness shows.</h1>
-        <p class="lead">Watch it happen in a simulated biopsy, then try to stop it.</p>
+        <p class="lead">Watch ALS unfold in a simulated biopsy, then try to stop it.</p>
         <div class="player">
           <button class="btn btn--primary" id="play" type="button" aria-label="Play">Play</button>
           <input type="range" id="scrub" min="0" max="96" step="1" value="0" aria-label="Month of disease">
@@ -268,46 +279,45 @@ select:disabled { opacity: 0.55; cursor: not-allowed; }
         </div>
         <p class="phase" id="phase" role="status"><span id="phase-text">Hidden phase</span></p>
       </div>
-      <figure class="sheet">
-        <div class="sheet__head">
-          <div class="sheet__head"><span class="fig">Figure 1</span><p class="sheet__title">Muscle cross-section</p></div>
-        </div>
-        <div class="plate"><canvas id="biopsy" width="720" height="720" role="img" aria-label="Simulated muscle cross-section"></canvas></div>
-        <dl class="readouts">
-          <div><dt>Motor neurons alive</dt><dd><span class="value" id="st-mu">120</span><span class="unit">in this muscle (of 120)</span><span class="meter"><i id="mt-mu" style="width:100%"></i></span></dd></div>
-          <div><dt>Muscle strength</dt><dd><span class="value" id="st-mvc">100%</span><span class="unit">of healthy</span><span class="meter"><i id="mt-mvc" style="width:100%"></i></span></dd></div>
-          <div><dt>Daily-function score</dt><dd><span class="value" id="st-fn">48</span><span class="unit">ALSFRS-R-like, 0 to 48</span><span class="meter"><i id="mt-fn" style="width:100%"></i></span></dd></div>
-          <div><dt>Blood neurofilament</dt><dd><span class="value" id="st-nfl">1.0×</span><span class="unit">NfL, vs healthy for age</span><span class="meter"><i id="mt-nfl" style="width:10%"></i></span></dd></div>
-        </dl>
-        <ul class="key" aria-label="Fibre colours">
-          <li><i class="sw sw--s"></i>Slow fibres</li>
-          <li><i class="sw sw--fr"></i>Fast, fatigue-resistant</li>
-          <li><i class="sw sw--ff"></i>Fast, fatigable</li>
-          <li><i class="sw sw--denerv"></i>Denervated</li>
-          <li><i class="sw sw--lost"></i>Lost</li>
-        </ul>
-        <figcaption class="legend-note">Amyotrophic lateral sclerosis (motor neuron disease), simulated. Each polygon is one muscle fibre, coloured by the type of motor neuron that drives it, as on an ATPase-stained biopsy.</figcaption>
-      </figure>
-    </div>
-  </section>
+    </section>
 
-  <section class="onset" aria-labelledby="onset-title">
-    <div class="container onset__grid">
-      <div class="onset__answer">
-        <h2 id="onset-title">How much is gone by the first symptom?</h2>
-        <p class="statement" id="claim"></p>
-        <p class="note" id="hero-note"></p>
-        <p class="note">When a neuron dies its fibres shrink (magenta). Surviving neighbours adopt them, so fibres of one type start to cluster: the “fibre-type grouping” pathologists see in ALS.</p>
+    <div class="spread__plate">
+      <div class="spread__pin">
+        <figure class="sheet">
+          <div class="sheet__head"><span class="fig">Figure 1</span><p class="sheet__title">Muscle cross-section</p></div>
+          <div class="plate"><canvas id="biopsy" width="720" height="720" role="img" aria-label="Simulated muscle cross-section"></canvas></div>
+          <dl class="readouts">
+            <div><dt>Motor neurons alive</dt><dd><span class="value" id="st-mu">120</span><span class="unit">in this muscle (of 120)</span><span class="meter"><i id="mt-mu" style="width:100%"></i></span></dd></div>
+            <div><dt>Muscle strength</dt><dd><span class="value" id="st-mvc">100%</span><span class="unit">of healthy</span><span class="meter"><i id="mt-mvc" style="width:100%"></i></span></dd></div>
+            <div><dt>Daily-function score</dt><dd><span class="value" id="st-fn">48</span><span class="unit">ALSFRS-R-like, 0 to 48</span><span class="meter"><i id="mt-fn" style="width:100%"></i></span></dd></div>
+            <div><dt>Blood neurofilament</dt><dd><span class="value" id="st-nfl">1.0×</span><span class="unit">NfL, vs healthy for age</span><span class="meter"><i id="mt-nfl" style="width:10%"></i></span></dd></div>
+          </dl>
+          <ul class="key" aria-label="Fibre colours">
+            <li><i class="sw sw--s"></i>Slow fibres</li>
+            <li><i class="sw sw--fr"></i>Fast, fatigue-resistant</li>
+            <li><i class="sw sw--ff"></i>Fast, fatigable</li>
+            <li><i class="sw sw--denerv"></i>Denervated</li>
+            <li><i class="sw sw--lost"></i>Lost</li>
+          </ul>
+          <figcaption class="legend-note">Amyotrophic lateral sclerosis (motor neuron disease), simulated. Each polygon is one muscle fibre, coloured by the type of motor neuron that drives it, as on an ATPase-stained biopsy.</figcaption>
+        </figure>
       </div>
+    </div>
+
+    <section class="onset" aria-labelledby="onset-title">
+      <h2 id="onset-title">How much is gone by the first symptom?</h2>
+      <p class="statement" id="claim"></p>
       <fieldset class="patients">
         <legend>Virtual patient</legend>
         <div class="chips" id="phenotypes" role="group" aria-label="Choose a virtual patient"></div>
         <p class="caption" id="phenotype-info"></p>
       </fieldset>
-    </div>
-  </section>
+      <p class="note" id="hero-note"></p>
+      <p class="note">When a neuron dies its fibres shrink (magenta). Surviving neighbours adopt them, so fibres of one type start to cluster: the “fibre-type grouping” pathologists see in ALS.</p>
+    </section>
+  </div>
 
-  <section id="hidden" class="section section--gap" aria-labelledby="hidden-title">
+  <section id="hidden" class="section section--gap section--tail" aria-labelledby="hidden-title">
     <div class="container">
       <div class="qa">
         <div class="qa__answer">
@@ -315,9 +325,9 @@ select:disabled { opacity: 0.55; cursor: not-allowed; }
           <p class="answer"><strong>Compensation hides the damage, and a blood test can see it.</strong> Surviving neurons grow to cover for lost ones, so strength holds until compensation runs out. Neurofilament light (NfL), a protein released by dying axons, tracks the <em>rate</em> of loss instead, so it rises long before symptoms.</p>
         </div>
         <div class="qa__controls">
-          <div class="control"><label for="k-lmn">How fast neurons die <output id="o-lmn">1.0×</output></label><input id="k-lmn" type="range" min="-1" max="1" step="0.05" value="0"></div>
-          <div class="control"><label for="k-spread">How fast it spreads <output id="o-spread">1.0×</output></label><input id="k-spread" type="range" min="-1" max="1" step="0.05" value="0"></div>
-          <div class="control"><label for="k-comp">How much survivors can grow <output id="o-comp">5.0×</output></label><input id="k-comp" type="range" min="1" max="10" step="0.25" value="5"></div>
+          <div class="control"><label for="k-lmn">How fast neurons die <output class="num" id="o-lmn">1.0×</output></label><input id="k-lmn" type="range" min="-1" max="1" step="0.05" value="0"></div>
+          <div class="control"><label for="k-spread">How fast it spreads <output class="num" id="o-spread">1.0×</output></label><input id="k-spread" type="range" min="-1" max="1" step="0.05" value="0"></div>
+          <div class="control"><label for="k-comp">How much survivors can grow <output class="num" id="o-comp">5.0×</output></label><input id="k-comp" type="range" min="1" max="10" step="0.25" value="5"></div>
         </div>
       </div>
       <figure class="sheet sheet--wide">
@@ -336,7 +346,7 @@ select:disabled { opacity: 0.55; cursor: not-allowed; }
     </div>
   </section>
 
-  <section id="treat" class="section section--gap-l" aria-labelledby="treat-title">
+  <section id="treat" class="section band--well" aria-labelledby="treat-title">
     <div class="container">
       <div class="qa">
         <div class="qa__answer">
@@ -368,7 +378,7 @@ select:disabled { opacity: 0.55; cursor: not-allowed; }
     </div>
   </section>
 
-  <section id="trial" class="section section--gap" aria-labelledby="trial-title">
+  <section id="trial" class="section section--gap section--lead" aria-labelledby="trial-title">
     <div class="container trial">
       <div class="trial__form">
         <h2 id="trial-title">Would a real trial notice?</h2>
@@ -376,7 +386,7 @@ select:disabled { opacity: 0.55; cursor: not-allowed; }
         <fieldset class="design">
           <legend>Design a virtual trial</legend>
           <div class="control"><label for="t-mech">Treatment</label><select id="t-mech"></select></div>
-          <div class="control"><label for="t-n">Patients per arm <output id="o-n">100</output></label><input id="t-n" type="range" min="20" max="300" step="10" value="100"></div>
+          <div class="control"><label for="t-n">Patients per arm <output class="num" id="o-n">100</output></label><input id="t-n" type="range" min="20" max="300" step="10" value="100"></div>
           <div class="control"><label for="t-dur">Trial length <output id="o-dur">6 months</output></label><input id="t-dur" type="range" min="0" max="3" step="1" value="1"></div>
           <div class="control"><label for="t-dfs">Enrol only faster progressors <output id="o-dfs">off</output></label><input id="t-dfs" type="range" min="0" max="1.2" step="0.1" value="0"></div>
           <div class="run"><button class="btn" id="t-run" type="button">Run virtual trials</button><p class="caption" id="t-status" role="status">Running an example trial…</p></div>
@@ -402,7 +412,7 @@ select:disabled { opacity: 0.55; cursor: not-allowed; }
     <div class="container">
       <div class="qa">
         <div class="qa__answer">
-          <h2 id="model-title">How does the model work?</h2>
+          <h2 id="model-title">Which six mechanisms does it run?</h2>
           <p class="answer"><strong>A mechanism you can read, test and change.</strong> Everything above comes from one open model running in your browser. It mirrors the Python package line by line, and an automated test checks that both give the same numbers.</p>
         </div>
       </div>

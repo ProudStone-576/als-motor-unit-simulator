@@ -571,7 +571,7 @@ function runHidden() {
     hlines: [{ y: 2, label: "doubled" }], yFormat: (v) => `${v}×`, xLabel: "months from first symptom",
     valueFormat: (v) => `${fmt(v, 1)}×`, aria: "Blood NfL over time",
   });
-  $("hidden-note").innerHTML = `At the first symptom, <strong>${fmt(100 * s.muLossAtOnset)}%</strong> of motor neurons in the ${region} are already lost, while strength there is still about ${fmt(100 * state.lastMvcAtOnset(res, r, onset))}%. Blood NfL ${Number.isFinite(s.nflLeadTime) && s.nflLeadTime > 0 ? `crossed twice normal <strong>${fmt(s.nflLeadTime)} months</strong> earlier` : "rose alongside the loss"}${Number.isFinite(s.survivalFromOnset) ? `, and breathing fails about <strong>${fmt(s.survivalFromOnset)} months</strong> after the first symptom` : ""}. Move the sliders: more growth capacity hides more loss, but the eventual decline is steeper.`;
+  $("hidden-note").innerHTML = `At the first symptom, strength in the ${region} is still about <strong>${fmt(100 * state.lastMvcAtOnset(res, r, onset))}%</strong> of healthy, so the loss in Figure 2 stays invisible to the patient${Number.isFinite(s.survivalFromOnset) ? `. Breathing fails about <strong>${fmt(s.survivalFromOnset)} months</strong> after the first symptom` : ""}. Move the sliders: more growth capacity hides more loss, but the eventual decline is steeper.`;
 }
 state.lastMvcAtOnset = (res, r, onset) => M.interpolateAt(res.time, M.series(res, "mvc", 0, r), onset);
 
@@ -623,7 +623,7 @@ function runTreat() {
     ["Blood NfL lowered by up to", `${fmt(100 * maxDrop)}%`, Number.isFinite(nflLag) ? `15% lower within ${fmt(nflLag)} months` : "never 15% lower"],
     ["Function 2 years after symptoms", `${fmt(at24(fnT))} vs ${fmt(at24(fnU))}`, "treated vs untreated, out of 48"],
     ["Function 2 points better after", Number.isFinite(fnLag) ? `${fmt(fnLag)} mo` : "never", "from the day treatment starts"],
-  ].map(([l, v, s]) => `<div class="tile"><span class="label">${l}</span><span class="value">${v}</span><span class="sub">${s}</span></div>`).join("");
+  ].map(([l, v, s]) => `<div class="tile"><span class="label">${l}</span><span class="value">${v.replace(/ (mo|vs)\b/g, ' <span class="word">$1</span>')}</span><span class="sub">${s}</span></div>`).join("");
   const xDomain = [Math.max(-onset, -18), 60];
   const markers = [{ x: start - onset, label: "treatment starts" }, { x: 0, label: "symptoms" }];
   const C = [

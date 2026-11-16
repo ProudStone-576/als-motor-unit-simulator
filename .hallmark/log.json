@@ -1,0 +1,31 @@
+[
+ {
+  "mode": "redesign",
+  "depth": "full",
+  "shape": "conversational-faq",
+  "theme": "almanac",
+  "axes": "mid/grotesk-sans/chromatic-magenta",
+  "hero": "settled",
+  "nav": "banner over a bar",
+  "footer": "colophon block",
+  "imagery": "product-live",
+  "photos": 0,
+  "entry": "try",
+  "fingerprint": "9182d4",
+  "sections": [
+   "hero+pinned plate",
+   "onset",
+   "hidden phase",
+   "treatment (well band)",
+   "virtual trial",
+   "mechanisms (ink band)",
+   "colophon"
+  ],
+  "signature": "the simulated ATPase biopsy as a printed atlas plate, pinned beside the onset question",
+  "waived": [
+   "79"
+  ],
+  "prompt": "a medical documentation and research change it properly the front end use",
+  "date": "2026-11-16"
+ }
+]
